@@ -7,8 +7,6 @@
 #include <iostream>
 #include <fstream>
 
-#define FC_CAPTURE_AND_RETHROW( ... ) catch( ... ) { throw; }
-
 namespace appbase {
 
 namespace bpo = boost::program_options;
@@ -29,7 +27,6 @@ class application_impl {
 
 application::application()
 :my( new application_impl() ){
-   //fc::thread::current().set_name( "app" );
    io_serv = std::make_shared<boost::asio::io_service>();
 }
 
@@ -75,7 +72,7 @@ void application::set_program_options()
 
 
 bool application::initialize( int argc, char** argv ) 
-{ try {
+{
    set_program_options();
 
    bpo::variables_map options;
@@ -99,47 +96,46 @@ bool application::initialize( int argc, char** argv )
    if( options.count( "config" ) ) {
       auto config_file_name = options["config"].as<bfs::path>();
       if( config_file_name.is_relative() )
-         config_file_name = data_dir / config_file_name; 
+         config_file_name = data_dir / config_file_name;
    }
 
-   if( !bfs::exists( config_file_name ) ) {
-      write_default_config( config_file_name );
+   if(!bfs::exists(config_file_name)) {
+      write_default_config(config_file_name);
    }
 
-   bpo::store(bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(), my->_cfg_options, true), options);
+   bpo::store(bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(),
+                                           my->_cfg_options, true), options);
 
-   if( options.count("plugin") > 0 )
+   if(options.count("plugin") > 0)
    {
-      auto plugins = options.at("plugin").as< std::vector< std::string > >();
-      //idump((plugins));
-      for( auto& arg : plugins )
+      auto plugins = options.at("plugin").as<std::vector<std::string>>();
+      for(auto& arg : plugins)
       {
          vector<string> names;
          boost::split(names, arg, boost::is_any_of(" \t,"));
-         for( const std::string& name : names )
-            get_plugin( name ).initialize( options );
+         for(const std::string& name : names)
+            get_plugin(name).initialize(options);
       }
    }
 
    bpo::notify(options);
 
    return true;
-} FC_CAPTURE_AND_RETHROW() }
+}
 
-void application::startup() 
-{ try {
-   for( auto plug : initialized_plugins )
+void application::startup()
+{
+   for(auto plug : initialized_plugins)
       plug->startup();
-} FC_CAPTURE_AND_RETHROW() }
+}
 
 void application::shutdown() {
-   //ilog( "Shutting down..." );
-   for( auto ritr = running_plugins.rbegin();
-        ritr != running_plugins.rend(); ++ritr ) {
+   for(auto ritr = running_plugins.rbegin();
+        ritr != running_plugins.rend(); ++ritr) {
       (*ritr)->shutdown();
    }
-   for( auto ritr = running_plugins.rbegin();
-        ritr != running_plugins.rend(); ++ritr ) {
+   for(auto ritr = running_plugins.rbegin();
+        ritr != running_plugins.rend(); ++ritr) {
       delete *ritr;
    }
    running_plugins.clear();
@@ -148,48 +144,42 @@ void application::shutdown() {
 }
 
 void application::quit() {
-   //ilog( "stop io service" );
    io_serv->stop();
 }
 
 void application::exec() {
-
    std::shared_ptr<boost::asio::signal_set> sigint_set(new boost::asio::signal_set(*io_serv, SIGINT));
-   sigint_set->async_wait( [sigint_set,this]( const boost::system::error_code& err, int num ) {
+   sigint_set->async_wait([sigint_set,this](const boost::system::error_code& err, int num) {
      quit();
      sigint_set->cancel();
    });
 
    std::shared_ptr<boost::asio::signal_set> sigterm_set(new boost::asio::signal_set(*io_serv, SIGTERM));
-   sigterm_set->async_wait( [sigterm_set,this]( const boost::system::error_code& err, int num ) {
+   sigterm_set->async_wait([sigterm_set,this](const boost::system::error_code& err, int num) {
      quit();
      sigterm_set->cancel();
    });
 
-
    io_serv->run();
 
-   //ilog( "shutdown " );
    shutdown(); /// perform synchronous shutdown
-   //ilog( "shutdown complete" );
 }
 
-void application::write_default_config( const bfs::path& cfg_file ) {
-   //ilog("Writing new config file at ${path}", ("path", cfg_file.parent_path()));
-   if( !bfs::exists(cfg_file.parent_path()) )
+void application::write_default_config(const bfs::path& cfg_file) {
+   if(!bfs::exists(cfg_file.parent_path()))
       bfs::create_directories(cfg_file.parent_path());
 
    std::ofstream out_cfg( bfs::path(cfg_file).make_preferred().string());
-   for( const boost::shared_ptr<bpo::option_description> od : my->_cfg_options.options() )
+   for(const boost::shared_ptr<bpo::option_description> od : my->_cfg_options.options())
    {
-      if( !od->description().empty() )
+      if(!od->description().empty())
          out_cfg << "# " << od->description() << "\n";
       boost::any store;
-      if( !od->semantic()->apply_default(store) )
+      if(!od->semantic()->apply_default(store))
          out_cfg << "# " << od->long_name() << " = \n";
       else {
          auto example = od->format_parameter();
-         if( example.empty() )
+         if(example.empty())
             // This is a boolean switch
             out_cfg << od->long_name() << " = " << "false\n";
          else {
@@ -202,22 +192,21 @@ void application::write_default_config( const bfs::path& cfg_file ) {
       out_cfg << "\n";
    }
    out_cfg.close();
-   //write_default_logging_config_to_stream(out_cfg);
 }
 
-abstract_plugin* application::find_plugin(const string& name )const 
-{ try {
+abstract_plugin* application::find_plugin(const string& name)const
+{
    auto itr = plugins.find(name);
-   if( itr == plugins.end() ) {
+   if(itr == plugins.end()) {
       return nullptr;
    }
    return itr->second;
-} FC_CAPTURE_AND_RETHROW( (name) ) }
+}
 
-abstract_plugin& application::get_plugin(const string& name )const {
+abstract_plugin& application::get_plugin(const string& name)const {
    auto ptr = find_plugin(name);
-   if( !ptr )
-      BOOST_THROW_EXCEPTION( std::runtime_error( "unable to find plugin: " + name ) );
+   if(!ptr)
+      BOOST_THROW_EXCEPTION(std::runtime_error("unable to find plugin: " + name));
    return *ptr;
 }
 
