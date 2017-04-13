@@ -8,7 +8,7 @@ namespace appbase {
    namespace bpo = boost::program_options;
    namespace bfs = boost::filesystem;
 
-   class application 
+   class application
    {
       public:
          ~application();
@@ -40,8 +40,7 @@ namespace appbase {
                return *existing;
 
             auto plug = new Plugin();
-            //ilog( "registering plugin '${name}'", ("name",plug->name()) );
-            plugins[plug->name()] = plug;
+            plugins[plug->name()].reset(plug);
             plug->register_dependencies();
             return *plug;
          }
@@ -76,7 +75,7 @@ namespace appbase {
 
       private:
          application(); ///< private because application is a singlton that should be accessed via instance()
-         map<string, abstract_plugin* >            plugins; ///< all registered plugins
+         map<string, std::unique_ptr<abstract_plugin>> plugins; ///< all registered plugins
          vector<abstract_plugin*>                  initialized_plugins; ///< stored in the order they were started running
          vector<abstract_plugin*>                  running_plugins; ///< stored in the order they were started running
          std::shared_ptr<boost::asio::io_service>  io_serv;
