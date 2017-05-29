@@ -14,21 +14,27 @@ namespace appbase {
          ~application();
 
          /**
-          *  Looks for the --plugin commandline / config option and calls initialize on those plugins
+          * @brief Looks for the --plugin commandline / config option and calls initialize on those plugins
           *
-          *  @return true if the application and plugins were initialized, false or exception on error
+          * @tparam Plugin List of plugins to initalize even if not mentioned by configuration. For plugins started by
+          * configuration settings or dependency resolution, this template has no effect.
+          * @return true if the application and plugins were initialized, false or exception on error
           */
-         bool                initialize(int argc, char** argv);
-         void                startup();
-         void                shutdown();
+         template<typename... Plugin>
+         bool                 initialize(int argc, char** argv) {
+            return initialize_impl(argc, argv, {find_plugin<Plugin>()...});
+         }
+
+         void                  startup();
+         void                  shutdown();
 
          /**
           *  Wait until quit(), SIGINT or SIGTERM and then shutdown
           */
-         void                exec();
-         void                quit();
+         void                 exec();
+         void                 quit();
 
-         static application& instance();
+         static application&  instance();
 
          abstract_plugin* find_plugin(const string& name)const;
          abstract_plugin& get_plugin(const string& name)const;
@@ -65,6 +71,8 @@ namespace appbase {
       protected:
          template<typename Impl>
          friend class plugin;
+
+         bool initialize_impl(int argc, char** argv, vector<abstract_plugin*> autostart_plugins);
 
          /** these notifications get called from the plugin when their state changes so that
           * the application can call shutdown in the reverse order.

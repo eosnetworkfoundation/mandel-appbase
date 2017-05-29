@@ -33,6 +33,11 @@ application::application()
 application::~application() {
 }
 
+void application::startup() {
+   for (auto plugin : initialized_plugins)
+      plugin->startup();
+}
+
 application& application::instance() {
    static application _app;
    return _app;
@@ -70,9 +75,7 @@ void application::set_program_options()
    my->_app_options.add(app_cli_opts);
 }
 
-
-bool application::initialize( int argc, char** argv ) 
-{
+bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*> autostart_plugins) {
    set_program_options();
 
    bpo::variables_map options;
@@ -117,16 +120,13 @@ bool application::initialize( int argc, char** argv )
             get_plugin(name).initialize(options);
       }
    }
+   for (auto plugin : autostart_plugins)
+      if (plugin != nullptr && plugin->get_state() == abstract_plugin::registered)
+         plugin->initialize(options);
 
    bpo::notify(options);
 
    return true;
-}
-
-void application::startup()
-{
-   for(auto plug : initialized_plugins)
-      plug->startup();
 }
 
 void application::shutdown() {
