@@ -13,6 +13,16 @@ namespace appbase {
       public:
          ~application();
 
+         /** @brief Sets version string
+          *
+          * @param version Version string output verbatim with -v/--version
+          */
+         void set_version(string version);
+         /** @brief Gets version string
+          *
+          * @return Version string output with -v/--version
+          */
+         string version() const;
          /**
           * @brief Looks for the --plugin commandline / config option and calls initialize on those plugins
           *
