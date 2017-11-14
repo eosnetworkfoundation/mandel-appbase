@@ -22,7 +22,9 @@ class application_impl {
       options_description     _app_options;
       options_description     _cfg_options;
 
-      bfs::path                _data_dir;
+      bfs::path               _data_dir;
+
+      string                  _version;
 };
 
 application::application()
@@ -31,6 +33,14 @@ application::application()
 }
 
 application::~application() { }
+
+void application::set_version(string version) {
+  my->_version = version;
+}
+
+string application::version() const {
+  return my->_version;
+}
 
 void application::startup() {
    for (auto plugin : initialized_plugins)
@@ -81,7 +91,12 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    bpo::store(bpo::parse_command_line(argc, argv, my->_app_options), options);
 
    if( options.count( "help" ) ) {
-      cout << my->_app_options << "\n";
+      cout << my->_app_options << std::endl;
+      return false;
+   }
+
+   if( options.count( "version" ) ) {
+      cout << my->_version << std::endl;
       return false;
    }
 
