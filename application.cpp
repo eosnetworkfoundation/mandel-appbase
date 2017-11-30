@@ -23,7 +23,7 @@ class application_impl {
       options_description     _cfg_options;
 
       bfs::path               _data_dir;
-      bfs::path               _logging_conf;
+      bfs::path               _logging_conf{"logging.json"};
 
       uint64_t                _version;
 };
