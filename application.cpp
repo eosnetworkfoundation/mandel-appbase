@@ -164,6 +164,7 @@ void application::shutdown() {
    running_plugins.clear();
    initialized_plugins.clear();
    plugins.clear();
+   io_serv.reset();
 }
 
 void application::quit() {
