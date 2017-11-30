@@ -23,9 +23,9 @@ class application_impl {
       options_description     _cfg_options;
 
       bfs::path               _data_dir;
+      bfs::path               _logging_conf;
 
-      string                  _version;
-      uint64_t                _version_int;
+      uint64_t                _version;
 };
 
 application::application()
@@ -35,20 +35,16 @@ application::application()
 
 application::~application() { }
 
-void application::set_version(string version) {
+void application::set_version(uint64_t version) {
   my->_version = version;
 }
 
-void application::set_version(uint64_t version) {
-  my->_version_int = version;
-}
-
-string application::version() const {
+uint64_t application::version() const {
   return my->_version;
 }
 
-uint64_t application::version_int() const {
-  return my->_version_int;
+bfs::path application::get_logging_conf() const {
+  return my->_logging_conf;
 }
 
 void application::startup() {
@@ -87,6 +83,7 @@ void application::set_program_options()
          ("version,v", "Print version information.")
          ("data-dir,d", bpo::value<bfs::path>()->default_value( "data-dir" ), "Directory containing configuration file config.ini")
          ("config,c", bpo::value<bfs::path>()->default_value( "config.ini" ), "Configuration file name relative to data-dir");
+         ("logconf,l", bpo::value<bfs::path>()->default_value( "logging.json" ), "Logging configuration file name/path");
 
    my->_cfg_options.add(app_cfg_opts);
    my->_app_options.add(app_cfg_opts);
@@ -108,6 +105,15 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       cout << my->_version << std::endl;
       return false;
    }
+
+   bfs::path logconf = "logging.json";
+   if( options.count("logconf") )
+   {
+     logconf = options["logconf"].as<bfs::path>();
+     if( logconf.is_relative() )
+       logconf = bfs::current_path() / logconf;
+   }
+   my->_logging_conf = logconf;
 
    bfs::path data_dir = "data-dir";
    if( options.count("data-dir") )

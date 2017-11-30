@@ -13,26 +13,21 @@ namespace appbase {
       public:
          ~application();
 
-         /** @brief Sets version string
+         /** @brief Set version
           *
-          * @param version Version string output verbatim with -v/--version
-          */
-         void set_version(string version);
-         /** @overload
-          *
-          * @param version Integer version independent of the string output with -v/--version
+          * @param version Version output with -v/--version
           */
          void set_version(uint64_t version);
-         /** @brief Gets version string
+         /** @brief Get version
           *
-          * @return Version string output with -v/--version
+          * @return Version output with -v/--version
           */
-         string version() const;
-         /** @brief Gets version integer
+         uint64_t version() const;
+         /** @brief Get logging configuration path.
           *
-          * @return Version integer independent of the string output with -v/--version
+          * @return Logging configuration location from command line
           */
-         uint64_t version_int() const;
+         bfs::path get_logging_conf() const;
          /**
           * @brief Looks for the --plugin commandline / config option and calls initialize on those plugins
           *
