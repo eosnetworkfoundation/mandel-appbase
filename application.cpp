@@ -82,7 +82,7 @@ void application::set_program_options()
          ("help,h", "Print this help message and exit.")
          ("version,v", "Print version information.")
          ("data-dir,d", bpo::value<bfs::path>()->default_value( "data-dir" ), "Directory containing configuration file config.ini")
-         ("config,c", bpo::value<bfs::path>()->default_value( "config.ini" ), "Configuration file name relative to data-dir");
+         ("config,c", bpo::value<bfs::path>()->default_value( "config.ini" ), "Configuration file name relative to data-dir")
          ("logconf,l", bpo::value<bfs::path>()->default_value( "logging.json" ), "Logging configuration file name/path for library users");
 
    my->_cfg_options.add(app_cfg_opts);
