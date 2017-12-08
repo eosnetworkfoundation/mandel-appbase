@@ -106,15 +106,6 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       return false;
    }
 
-   bfs::path logconf = "logging.json";
-   if( options.count("logconf") )
-   {
-     logconf = options["logconf"].as<bfs::path>();
-     if( logconf.is_relative() )
-       logconf = bfs::current_path() / logconf;
-   }
-   my->_logging_conf = logconf;
-
    bfs::path data_dir = "data-dir";
    if( options.count("data-dir") )
    {
@@ -123,6 +114,15 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
          data_dir = bfs::current_path() / data_dir;
    }
    my->_data_dir = data_dir;
+
+   bfs::path logconf = data_dir / "logging.json";
+   if( options.count("logconf") )
+   {
+     logconf = options["logconf"].as<bfs::path>();
+     if( logconf.is_relative() )
+       logconf = data_dir / logconf;
+   }
+   my->_logging_conf = logconf;
 
    bfs::path config_file_name = data_dir / "config.ini";
    if( options.count( "config" ) ) {
