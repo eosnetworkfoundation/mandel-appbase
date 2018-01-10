@@ -126,7 +126,7 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
 
    bfs::path config_file_name = data_dir / "config.ini";
    if( options.count( "config" ) ) {
-      auto config_file_name = options["config"].as<bfs::path>();
+      config_file_name = options["config"].as<bfs::path>();
       if( config_file_name.is_relative() )
          config_file_name = data_dir / config_file_name;
    }
