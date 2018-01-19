@@ -132,6 +132,11 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    }
 
    if(!bfs::exists(config_file_name)) {
+      if(config_file_name.compare(data_dir / "config.ini") != 0)
+      {
+         cout << "Config file " << config_file_name << " missing." << std::endl;
+         return false;
+      }
       write_default_config(config_file_name);
    }
 
