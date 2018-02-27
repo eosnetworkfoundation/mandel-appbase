@@ -2,11 +2,15 @@
 project( AppBase )
 cmake_minimum_required( VERSION 2.8.12 )
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
+
+include( InstallDirectoryPermissions )
+
 file(GLOB HEADERS "include/appbase/*.hpp")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
-SET(BOOST_COMPONENTS)
-LIST(APPEND BOOST_COMPONENTS thread
+set(BOOST_COMPONENTS)
+list(APPEND BOOST_COMPONENTS thread
                              date_time
                              filesystem
                              system
@@ -15,7 +19,7 @@ LIST(APPEND BOOST_COMPONENTS thread
                              unit_test_framework
                              locale)
 
-FIND_PACKAGE(Boost 1.60 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+find_package(Boost 1.60 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 set( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
 
 if( APPLE )
@@ -48,13 +52,18 @@ target_link_libraries( appbase ${Boost_LIBRARIES})
 target_include_directories( appbase
                             PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" ${Boost_INCLUDE_DIR})
 
-INSTALL( TARGETS
+set_target_properties( appbase PROPERTIES PUBLIC_HEADER "${HEADERS}" )
+
+set(CPACK_PACKAGING_INSTALL_PREFIX /)
+
+install( TARGETS
    appbase
 
-   RUNTIME DESTINATION bin
-   LIBRARY DESTINATION lib
-   ARCHIVE DESTINATION lib
+   RUNTIME DESTINATION usr/bin
+   LIBRARY DESTINATION usr/lib
+   ARCHIVE DESTINATION usr/lib
+   PUBLIC_HEADER DESTINATION usr/include/appbase
 )
-INSTALL( FILES ${HEADERS} DESTINATION "include/appbase" )
+install_directory_permissions( DIRECTORY usr/include/appbase )
 
 add_subdirectory( examples )

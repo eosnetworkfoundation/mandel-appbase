@@ -23,6 +23,28 @@ namespace appbase {
           * @return Version output with -v/--version
           */
          uint64_t version() const;
+         /** @brief Set default data directory
+          *
+          * @param data_dir Default data directory to use if not specified
+          *                 on the command line.
+          */
+         void set_default_data_dir(const bfs::path& data_dir = "data-dir");
+         /** @brief Get data directory
+          *
+          * @return Data directory, possibly from command line
+          */
+         bfs::path data_dir() const;
+         /** @brief Set default config directory
+          *
+          * @param config_dir Default configuration directory to use if not
+          *                   specified on the command line.
+          */
+         void set_default_config_dir(const bfs::path& config_dir = "etc");
+         /** @brief Get config directory
+          *
+          * @return Config directory, possibly from command line
+          */
+         bfs::path config_dir() const;
          /** @brief Get logging configuration path.
           *
           * @return Logging configuration location from command line
@@ -77,9 +99,6 @@ namespace appbase {
             auto ptr = find_plugin<Plugin>();
             return *ptr;
          }
-
-         bfs::path data_dir()const;
-
 
          boost::asio::io_service& get_io_service() { return *io_serv; }
       protected:
