@@ -215,11 +215,26 @@ void application::write_default_config(const bfs::path& cfg_file) {
    if(!bfs::exists(cfg_file.parent_path()))
       bfs::create_directories(cfg_file.parent_path());
 
+   std::map<std::string, std::string> option_to_plug;
+   for(auto& plug : plugins) {
+      boost::program_options::options_description plugin_cli_opts;
+      boost::program_options::options_description plugin_cfg_opts;
+      plug.second->set_program_options(plugin_cli_opts, plugin_cfg_opts);
+
+      for(const boost::shared_ptr<bpo::option_description>& opt : plugin_cfg_opts.options())
+         option_to_plug[opt->long_name()] = plug.second->name();
+   }
+
    std::ofstream out_cfg( bfs::path(cfg_file).make_preferred().string());
    for(const boost::shared_ptr<bpo::option_description> od : my->_cfg_options.options())
    {
-      if(!od->description().empty())
-         out_cfg << "# " << od->description() << std::endl;
+      if(!od->description().empty()) {
+         out_cfg << "# " << od->description();
+         std::map<std::string, std::string>::iterator it;
+         if((it = option_to_plug.find(od->long_name())) != option_to_plug.end())
+            out_cfg << " (" << it->second << ")";
+         out_cfg << std::endl;
+      }
       boost::any store;
       if(!od->semantic()->apply_default(store))
          out_cfg << "# " << od->long_name() << " = " << std::endl;
