@@ -124,6 +124,7 @@ namespace appbase {
 
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
+         void print_default_config(std::ostream& os);
          std::unique_ptr<class application_impl> my;
 
    };
