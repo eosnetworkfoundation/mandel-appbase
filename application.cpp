@@ -95,6 +95,7 @@ void application::set_program_options()
    app_cli_opts.add_options()
          ("help,h", "Print this help message and exit.")
          ("version,v", "Print version information.")
+         ("print-default-config", "Print default configuration template")
          ("data-dir,d", bpo::value<bfs::path>(), "Directory containing program runtime data")
          ("config-dir", bpo::value<bfs::path>(), "Directory containing configuration files such as config.ini")
          ("config,c", bpo::value<bfs::path>()->default_value( "config.ini" ), "Configuration file name relative to config-dir")
@@ -118,6 +119,11 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
 
    if( options.count( "version" ) ) {
       cout << my->_version << std::endl;
+      return false;
+   }
+
+   if( options.count( "print-default-config" ) ) {
+      print_default_config(cout);
       return false;
    }
 
@@ -220,6 +226,12 @@ void application::write_default_config(const bfs::path& cfg_file) {
    if(!bfs::exists(cfg_file.parent_path()))
       bfs::create_directories(cfg_file.parent_path());
 
+   std::ofstream out_cfg( bfs::path(cfg_file).make_preferred().string());
+   print_default_config(out_cfg);
+   out_cfg.close();
+}
+
+void application::print_default_config(std::ostream& os) {
    std::map<std::string, std::string> option_to_plug;
    for(auto& plug : plugins) {
       boost::program_options::options_description plugin_cli_opts;
@@ -230,34 +242,32 @@ void application::write_default_config(const bfs::path& cfg_file) {
          option_to_plug[opt->long_name()] = plug.second->name();
    }
 
-   std::ofstream out_cfg( bfs::path(cfg_file).make_preferred().string());
    for(const boost::shared_ptr<bpo::option_description> od : my->_cfg_options.options())
    {
       if(!od->description().empty()) {
-         out_cfg << "# " << od->description();
+         os << "# " << od->description();
          std::map<std::string, std::string>::iterator it;
          if((it = option_to_plug.find(od->long_name())) != option_to_plug.end())
-            out_cfg << " (" << it->second << ")";
-         out_cfg << std::endl;
+            os << " (" << it->second << ")";
+         os << std::endl;
       }
       boost::any store;
       if(!od->semantic()->apply_default(store))
-         out_cfg << "# " << od->long_name() << " = " << std::endl;
+         os << "# " << od->long_name() << " = " << std::endl;
       else {
          auto example = od->format_parameter();
          if(example.empty())
             // This is a boolean switch
-            out_cfg << od->long_name() << " = " << "false" << std::endl;
+            os << od->long_name() << " = " << "false" << std::endl;
          else {
             // The string is formatted "arg (=<interesting part>)"
             example.erase(0, 6);
             example.erase(example.length()-1);
-            out_cfg << od->long_name() << " = " << example << std::endl;
+            os << od->long_name() << " = " << example << std::endl;
          }
       }
-      out_cfg << std::endl;
+      os << std::endl;
    }
-   out_cfg.close();
 }
 
 abstract_plugin* application::find_plugin(const string& name)const
