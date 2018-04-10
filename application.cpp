@@ -96,10 +96,10 @@ void application::set_program_options()
          ("help,h", "Print this help message and exit.")
          ("version,v", "Print version information.")
          ("print-default-config", "Print default configuration template")
-         ("data-dir,d", bpo::value<bfs::path>(), "Directory containing program runtime data")
-         ("config-dir", bpo::value<bfs::path>(), "Directory containing configuration files such as config.ini")
-         ("config,c", bpo::value<bfs::path>()->default_value( "config.ini" ), "Configuration file name relative to config-dir")
-         ("logconf,l", bpo::value<bfs::path>()->default_value( "logging.json" ), "Logging configuration file name/path for library users");
+         ("data-dir,d", bpo::value<std::string>(), "Directory containing program runtime data")
+         ("config-dir", bpo::value<std::string>(), "Directory containing configuration files such as config.ini")
+         ("config,c", bpo::value<std::string>()->default_value( "config.ini" ), "Configuration file name relative to config-dir")
+         ("logconf,l", bpo::value<std::string>()->default_value( "logging.json" ), "Logging configuration file name/path for library users");
 
    my->_cfg_options.add(app_cfg_opts);
    my->_app_options.add(app_cfg_opts);
@@ -128,30 +128,35 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    }
 
    if( options.count( "data-dir" ) ) {
-      bfs::path data_dir = options["data-dir"].as<bfs::path>();
+      // Workaround for 10+ year old Boost defect
+      // See https://svn.boost.org/trac10/ticket/8535
+      // Should be .as<bfs::path>() but paths with escaped spaces break bpo e.g.
+      // std::exception::what: the argument ('/path/with/white\ space') for option '--data-dir' is invalid
+      auto workaround = options["data-dir"].as<std::string>();
+      bfs::path data_dir = workaround;
       if( data_dir.is_relative() )
          data_dir = bfs::current_path() / data_dir;
       my->_data_dir = data_dir;
    }
 
    if( options.count( "config-dir" ) ) {
-      bfs::path config_dir = options["config-dir"].as<bfs::path>();
+      auto workaround = options["config-dir"].as<std::string>();
+      bfs::path config_dir = workaround;
       if( config_dir.is_relative() )
          config_dir = bfs::current_path() / config_dir;
       my->_config_dir = config_dir;
    }
 
-   bfs::path logconf = options["logconf"].as<bfs::path>();
+   auto workaround = options["logconf"].as<std::string>();
+   bfs::path logconf = workaround;
    if( logconf.is_relative() )
       logconf = my->_config_dir / logconf;
    my->_logging_conf = logconf;
 
-   bfs::path config_file_name = my->_config_dir / "config.ini";
-   if( options.count( "config" ) ) {
-      config_file_name = options["config"].as<bfs::path>();
-      if( config_file_name.is_relative() )
-         config_file_name = my->_config_dir / config_file_name;
-   }
+   workaround = options["config"].as<std::string>();
+   bfs::path config_file_name = workaround;
+   if( config_file_name.is_relative() )
+      config_file_name = my->_config_dir / config_file_name;
 
    if(!bfs::exists(config_file_name)) {
       if(config_file_name.compare(my->_config_dir / "config.ini") != 0)
