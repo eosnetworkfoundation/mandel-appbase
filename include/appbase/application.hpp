@@ -1,8 +1,9 @@
 #pragma once
 #include <appbase/plugin.hpp>
+#include <appbase/channel.hpp>
+#include <appbase/method.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/core/demangle.hpp>
-#include <boost/asio.hpp>
 
 namespace appbase {
    namespace bpo = boost::program_options;
@@ -12,6 +13,7 @@ namespace appbase {
    {
       public:
          ~application();
+
 
          /** @brief Set version
           *
@@ -100,6 +102,34 @@ namespace appbase {
             return *ptr;
          }
 
+         template<typename MethodDecl>
+         auto get_method() -> std::enable_if_t<is_method_decl<MethodDecl>::value, typename MethodDecl::method_type&>
+         {
+            using method_type = typename MethodDecl::method_type;
+            auto key = std::type_index(typeid(MethodDecl));
+            auto itr = methods.find(key);
+            if(itr != methods.end()) {
+               return *method_type::get_method(itr->second);
+            } else {
+               methods.emplace(std::make_pair(key, method_type::make_unique()));
+               return  *method_type::get_method(methods.at(key));
+            }
+         }
+
+         template<typename ChannelDecl>
+         auto get_channel() -> std::enable_if_t<is_channel_decl<ChannelDecl>::value, typename ChannelDecl::channel_type&>
+         {
+            using channel_type = typename ChannelDecl::channel_type;
+            auto key = std::type_index(typeid(ChannelDecl));
+            auto itr = channels.find(key);
+            if(itr != channels.end()) {
+               return *channel_type::get_channel(itr->second);
+            } else {
+               channels.emplace(std::make_pair(key, channel_type::make_unique(io_serv)));
+               return  *channel_type::get_channel(channels.at(key));
+            }
+         }
+
          boost::asio::io_service& get_io_service() { return *io_serv; }
       protected:
          template<typename Impl>
@@ -120,6 +150,10 @@ namespace appbase {
          map<string, std::unique_ptr<abstract_plugin>> plugins; ///< all registered plugins
          vector<abstract_plugin*>                  initialized_plugins; ///< stored in the order they were started running
          vector<abstract_plugin*>                  running_plugins; ///< stored in the order they were started running
+
+         map<std::type_index, erased_method_ptr>   methods;
+         map<std::type_index, erased_channel_ptr>  channels;
+
          std::shared_ptr<boost::asio::io_service>  io_serv;
 
          void set_program_options();
