@@ -40,7 +40,7 @@ namespace appbase {
     * @tparam Data - the type of data to publish
     */
    template<typename Data, typename DispatchPolicy>
-   class channel final : private boost::signals2::signal<void(const Data&), DispatchPolicy> {
+   class channel final {
       public:
          using ios_ptr_type = std::shared_ptr<boost::asio::io_service>;
          using handle_type = boost::signals2::connection;
@@ -53,7 +53,7 @@ namespace appbase {
             if (has_subscribers()) {
                // this will copy data into the lambda
                ios_ptr->post([this, data]() {
-                  (*this)(data);
+                  _signal(data);
                });
             }
          }
@@ -66,7 +66,7 @@ namespace appbase {
           */
          template<typename Callback>
          handle_type subscribe(Callback cb) {
-            return this->connect(cb);
+            return _signal.connect(cb);
          }
 
          /**
@@ -87,23 +87,23 @@ namespace appbase {
           */
          auto set_dispatcher(const DispatchPolicy& policy ) -> std::enable_if_t<std::is_copy_constructible<DispatchPolicy>::value,void>
          {
-            (*this).set_combiner(policy);
+            _signal.set_combiner(policy);
          }
 
          /**
           * Returns whether or not there are subscribers
           */
          bool has_subscribers() {
-            return (*this).num_slots() > 0;
+            return _signal.num_slots() > 0;
          }
 
       private:
-         channel(const ios_ptr_type& ios_ptr)
+         explicit channel(const ios_ptr_type& ios_ptr)
          :ios_ptr(ios_ptr)
          {
          }
 
-         virtual ~channel() {};
+         virtual ~channel() = default;
 
          /**
           * Proper deleter for type-erased channel
@@ -112,7 +112,7 @@ namespace appbase {
           * @param erased_channel_ptr
           */
          static void deleter(void* erased_channel_ptr) {
-            channel *ptr = reinterpret_cast<channel*>(erased_channel_ptr);
+            auto ptr = reinterpret_cast<channel*>(erased_channel_ptr);
             delete ptr;
          }
 
@@ -136,6 +136,7 @@ namespace appbase {
          }
 
          ios_ptr_type ios_ptr;
+         boost::signals2::signal<void(const Data&), DispatchPolicy> _signal;
 
          friend class appbase::application;
    };

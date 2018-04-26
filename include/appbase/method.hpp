@@ -56,7 +56,7 @@ namespace appbase {
             ++first;
          }
 
-         throw new std::length_error(std::string("No Result Available, All providers returned exceptions[") + err + "]");
+         throw std::length_error(std::string("No Result Available, All providers returned exceptions[") + err + "]");
       }
    };
 
@@ -71,7 +71,7 @@ namespace appbase {
     * @tparam DispatchPolicy - the policy for dispatching this method
     */
    template<typename FunctionSig, typename DispatchPolicy>
-   class method final : private boost::signals2::signal<FunctionSig, DispatchPolicy> {
+   class method final {
       public:
          using args_tuple_type = typename function_sig_helper<FunctionSig>::args_tuple_type;
          using result_type = typename function_sig_helper<FunctionSig>::result_type;
@@ -85,7 +85,7 @@ namespace appbase {
           */
          template<typename T>
          void register_provider(T provider, int priority = 0) {
-            this->connect(priority, provider);
+            _signal.connect(priority, provider);
          }
 
          /**
@@ -96,12 +96,12 @@ namespace appbase {
          template<typename ... Args>
          auto operator()(Args ... args) -> typename std::enable_if_t<std::is_same<std::tuple<Args...>, args_tuple_type>::value, result_type>
          {
-            return this->operator()(args...);
+            return _signal(args...);
          }
 
       protected:
          method() = default;
-         virtual ~method() {};
+         virtual ~method() = default;
 
          /**
           * Proper deleter for type-erased method
@@ -110,7 +110,7 @@ namespace appbase {
           * @param erased_method_ptr
           */
          static void deleter(void* erased_method_ptr) {
-            method *ptr = reinterpret_cast<method*>(erased_method_ptr);
+            auto ptr = reinterpret_cast<method*>(erased_method_ptr);
             delete ptr;
          }
 
@@ -131,6 +131,8 @@ namespace appbase {
          static erased_method_ptr make_unique() {
             return erased_method_ptr(new method(), &deleter);
          }
+
+         boost::signals2::signal<FunctionSig, DispatchPolicy> _signal;
 
          friend class appbase::application;
    };
