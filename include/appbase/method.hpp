@@ -16,18 +16,19 @@ namespace appbase {
       using result_type = Ret;
    };
 
-   template<typename T>
-   struct function_sig_helper;
+   template<typename FunctionSig>
+   struct method_traits;
 
    template<typename Ret, typename ...Args>
-   struct function_sig_helper<Ret(Args...)> {
+   struct method_traits<Ret(Args...)> {
       using result_type = typename dispatch_policy_helper_impl<Ret, Args...>::result_type;
       using args_tuple_type = std::tuple<Args...>;
+
    };
 
    template<typename FunctionSig>
    struct first_success_policy {
-      using result_type = typename function_sig_helper<FunctionSig>::result_type;
+      using result_type = typename method_traits<FunctionSig>::result_type;
       std::string err;
 
       /**
@@ -73,8 +74,9 @@ namespace appbase {
    template<typename FunctionSig, typename DispatchPolicy>
    class method final {
       public:
-         using args_tuple_type = typename function_sig_helper<FunctionSig>::args_tuple_type;
-         using result_type = typename function_sig_helper<FunctionSig>::result_type;
+         using traits = method_traits<FunctionSig>;
+         using args_tuple_type = traits::args_tuple_type;
+         using result_type = traits::result_type;
 
          /**
           * Register a provider of this method
@@ -94,9 +96,9 @@ namespace appbase {
           * @throws exception depending on the DispatchPolicy
           */
          template<typename ... Args>
-         auto operator()(Args ... args) -> typename std::enable_if_t<std::is_same<std::tuple<Args...>, args_tuple_type>::value, result_type>
+         auto operator()(Args&&... args) -> typename std::enable_if_t<std::is_same<std::tuple<Args...>, args_tuple_type>::value, result_type>
          {
-            return _signal(args...);
+            return _signal(std::forward<Args>(args...));
          }
 
       protected:
@@ -138,7 +140,7 @@ namespace appbase {
    };
 
 
-   template< typename Tag, typename FunctionSig, typename DispatchPolicy = first_success_policy<FunctionSig> >
+   template< typename Tag, typename FunctionSig, typename DispatchPolicy = first_success_policy<FunctionSig>>
    struct method_decl {
       using method_type = method<FunctionSig, DispatchPolicy>;
       using tag_type = Tag;

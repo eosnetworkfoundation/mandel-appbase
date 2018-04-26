@@ -44,6 +44,7 @@ namespace appbase {
       public:
          using ios_ptr_type = std::shared_ptr<boost::asio::io_service>;
          using handle_type = boost::signals2::connection;
+         using scoped_handle_type = boost::signals2::scoped_connection;
 
          /**
           * Publish data to a channel
