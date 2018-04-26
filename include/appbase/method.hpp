@@ -75,8 +75,8 @@ namespace appbase {
    class method final {
       public:
          using traits = method_traits<FunctionSig>;
-         using args_tuple_type = traits::args_tuple_type;
-         using result_type = traits::result_type;
+         using args_tuple_type = typename traits::args_tuple_type;
+         using result_type = typename traits::result_type;
 
          /**
           * Register a provider of this method
@@ -98,7 +98,7 @@ namespace appbase {
          template<typename ... Args>
          auto operator()(Args&&... args) -> typename std::enable_if_t<std::is_same<std::tuple<Args...>, args_tuple_type>::value, result_type>
          {
-            return _signal(std::forward<Args>(args...));
+            return _signal(std::forward<Args>(args)...);
          }
 
       protected:
