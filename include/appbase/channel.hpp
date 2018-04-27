@@ -43,8 +43,29 @@ namespace appbase {
    class channel final {
       public:
          using ios_ptr_type = std::shared_ptr<boost::asio::io_service>;
-         using handle_type = boost::signals2::connection;
-         using scoped_handle_type = boost::signals2::scoped_connection;
+
+         class handle {
+            public:
+               ~handle() {
+                  unsubscribe();
+               }
+
+               void unsubscribe() {
+                  if (_handle.connected()) {
+                     _handle.disconnect();
+                  }
+               }
+
+            private:
+               using handle_type = boost::signals2::connection;
+               handle_type _handle;
+
+               handle(handle_type&& _handle)
+               :_handle(std::move(_handle))
+               {}
+
+               friend class channel;
+         };
 
          /**
           * Publish data to a channel
@@ -66,16 +87,8 @@ namespace appbase {
           * @return handle to the subscription
           */
          template<typename Callback>
-         handle_type subscribe(Callback cb) {
-            return _signal.connect(cb);
-         }
-
-         /**
-          * unsubscribe from data on a channel
-          * @param handle
-          */
-         void unsubscribe(const handle_type& handle) {
-            handle.disconnect();
+         handle subscribe(Callback cb) {
+            return handle(_signal.connect(cb));
          }
 
          /**
