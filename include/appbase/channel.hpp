@@ -56,6 +56,14 @@ namespace appbase {
                   }
                }
 
+               handle() = default;
+               handle(handle&&) = default;
+               handle& operator= (handle&& rhs) = default;
+
+               // dont allow copying since this protects the resource
+               handle(const handle& ) = delete;
+               handle& operator= (const handle& ) = delete;
+
             private:
                using handle_type = boost::signals2::connection;
                handle_type _handle;
@@ -108,7 +116,8 @@ namespace appbase {
           * Returns whether or not there are subscribers
           */
          bool has_subscribers() {
-            return _signal.num_slots() > 0;
+            auto connections = _signal.num_slots();
+            return connections > 0;
          }
 
       private:
