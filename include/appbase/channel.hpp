@@ -12,6 +12,10 @@ namespace appbase {
 
    using erased_channel_ptr = std::unique_ptr<void, void(*)(void*)>;
 
+   /**
+    * A basic DispatchPolicy that will catch and drop any exceptions thrown
+    * during the dispatch of messages on a channel
+    */
    struct drop_exceptions {
       drop_exceptions() = default;
       using result_type = void;
@@ -44,18 +48,27 @@ namespace appbase {
       public:
          using ios_ptr_type = std::shared_ptr<boost::asio::io_service>;
 
+         /**
+          * Type that represents an active subscription to a channel allowing
+          * for ownership via RAII and also explicit unsubscribe actions
+          */
          class handle {
             public:
                ~handle() {
                   unsubscribe();
                }
 
+               /**
+                * Explicitly unsubcribe from channel before the lifetime
+                * of this object expires
+                */
                void unsubscribe() {
                   if (_handle.connected()) {
                      _handle.disconnect();
                   }
                }
 
+               // This handle can be constructed and moved
                handle() = default;
                handle(handle&&) = default;
                handle& operator= (handle&& rhs) = default;
@@ -68,6 +81,12 @@ namespace appbase {
                using handle_type = boost::signals2::connection;
                handle_type _handle;
 
+               /**
+                * Construct a handle from an internal represenation of a handle
+                * In this case a boost::signals2::connection
+                *
+                * @param _handle - the boost::signals2::connection to wrap
+                */
                handle(handle_type&& _handle)
                :_handle(std::move(_handle))
                {}
@@ -76,8 +95,8 @@ namespace appbase {
          };
 
          /**
-          * Publish data to a channel
-          * @param data
+          * Publish data to a channel.  This data is *copied* on publish.
+          * @param data - the data to publish
           */
          void publish(const Data& data) {
             if (has_subscribers()) {
@@ -164,6 +183,12 @@ namespace appbase {
          friend class appbase::application;
    };
 
+   /**
+    *
+    * @tparam Tag - API specific discriminator used to distinguish between otherwise identical data types
+    * @tparam Data - the typ of the Data the channel carries
+    * @tparam DispatchPolicy - The dispatch policy to use for this channel (defaults to @ref drop_exceptions)
+    */
    template< typename Tag, typename Data, typename DispatchPolicy = drop_exceptions >
    struct channel_decl {
       using channel_type = channel<Data, DispatchPolicy>;

@@ -102,6 +102,13 @@ namespace appbase {
             return *ptr;
          }
 
+         /**
+          * Fetch a reference to the method declared by the passed in type.  This will construct the method
+          * on first access.  This allows loose and deferred binding between plugins
+          *
+          * @tparam MethodDecl - @ref appbase::method_decl
+          * @return reference to the method described by the declaration
+          */
          template<typename MethodDecl>
          auto get_method() -> std::enable_if_t<is_method_decl<MethodDecl>::value, typename MethodDecl::method_type&>
          {
@@ -116,6 +123,13 @@ namespace appbase {
             }
          }
 
+         /**
+          * Fetch a reference to the channel declared by the passed in type.  This will construct the channel
+          * on first access.  This allows loose and deferred binding between plugins
+          *
+          * @tparam ChannelDecl - @ref appbase::channel_decl
+          * @return reference to the channel described by the declaration
+          */
          template<typename ChannelDecl>
          auto get_channel() -> std::enable_if_t<is_channel_decl<ChannelDecl>::value, typename ChannelDecl::channel_type&>
          {
