@@ -4,6 +4,7 @@
 #include <appbase/method.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/core/demangle.hpp>
+#include <typeindex>
 
 namespace appbase {
    namespace bpo = boost::program_options;
