@@ -11,31 +11,16 @@ namespace appbase {
 
    using erased_method_ptr = std::unique_ptr<void, void(*)(void*)>;
 
-   namespace impl {
-      template<typename Ret, typename ... Args>
-      struct dispatch_policy_helper_impl {
-         using result_type = Ret;
-      };
-
-      template<typename FunctionSig>
-      struct method_traits;
-
-      template<typename Ret, typename ...Args>
-      struct method_traits<Ret(Args...)> {
-         using result_type = typename dispatch_policy_helper_impl<Ret, Args...>::result_type;
-         using args_tuple_type = std::tuple<Args...>;
-
-      };
-   }
-
    /**
     * Basic DispatchPolicy that will try providers sequentially until one succeeds
     * without throwing an exception.  that result becomes the result of the method
     */
    template<typename FunctionSig>
-   struct first_success_policy {
-      using result_type = typename impl::method_traits<FunctionSig>::result_type;
-      std::string err;
+   struct first_success_policy;
+
+   template<typename Ret, typename ... Args>
+   struct first_success_policy<Ret(Args...)> {
+      using result_type = Ret;
 
       /**
        * Iterate through the providers, calling (dereferencing) each
@@ -48,7 +33,8 @@ namespace appbase {
        * @return
        */
       template<typename InputIterator>
-      result_type operator()(InputIterator first, InputIterator last) {
+      Ret operator()(InputIterator first, InputIterator last) {
+         std::string err;
          while (first != last) {
             try {
                return *first; // de-referencing the iterator causes the provider to run
@@ -67,6 +53,136 @@ namespace appbase {
       }
    };
 
+   template<typename ... Args>
+   struct first_success_policy<void(Args...)> {
+      using result_type = void;
+
+      /**
+       * Iterate through the providers, calling (dereferencing) each
+       * if the provider throws, then store then try the next provider
+       * if none succeed throw an error with the aggregated error descriptions
+       *
+       * @tparam InputIterator
+       * @param first
+       * @param last
+       * @return
+       */
+      template<typename InputIterator>
+      void operator()(InputIterator first, InputIterator last) {
+         std::string err;
+
+         while (first != last) {
+            try {
+               *first; // de-referencing the iterator causes the provider to run
+            } catch (...) {
+               if (!err.empty()) {
+                  err += "\",\"";
+               }
+
+               err += boost::current_exception_diagnostic_information();
+            }
+
+            ++first;
+         }
+
+         throw std::length_error(std::string("No Result Available, All providers returned exceptions[") + err + "]");
+      }
+   };
+
+
+   /**
+    * Basic DispatchPolicy that will only call the first provider throwing or returning that providers results
+    */
+   template<typename FunctionSig>
+   struct first_provider_policy;
+
+   template<typename Ret, typename ... Args>
+   struct first_provider_policy<Ret(Args...)> {
+      using result_type = Ret;
+
+      /**
+       * Call the first provider as ordered by registered priority, return its result
+       * throw its exceptions
+       *
+       * @tparam InputIterator
+       * @param first
+       * @param
+       * @return
+       */
+      template<typename InputIterator>
+      Ret operator()(InputIterator first, InputIterator) {
+         return *first;
+      }
+   };
+
+   template<typename ... Args>
+   struct first_provider_policy<void(Args...)> {
+      using result_type = void;
+
+      /**
+       * Call the first provider as ordered by registered priority, return its result
+       * throw its exceptions
+       *
+       * @tparam InputIterator
+       * @param first
+       * @param
+       * @return
+       */
+      template<typename InputIterator>
+      void operator()(InputIterator first, InputIterator) {
+         *first;
+      }
+   };
+
+   namespace impl {
+      template<typename FunctionSig, typename DispatchPolicy>
+      class method_caller;
+
+      template<typename Ret, typename ...Args, typename DispatchPolicy>
+      class method_caller<Ret(Args...), DispatchPolicy> {
+         public:
+            using signal_type = boost::signals2::signal<Ret(Args...), DispatchPolicy>;
+            using result_type = Ret;
+
+            method_caller()
+            {}
+
+            /**
+             * call operator from boost::signals2
+             *
+             * @throws exception depending on the DispatchPolicy
+             */
+            Ret operator()(Args&&... args)
+            {
+               return _signal(std::forward<Args>(args)...);
+            }
+
+            signal_type _signal;
+      };
+
+      template<typename ...Args, typename DispatchPolicy>
+      class method_caller<void(Args...), DispatchPolicy> {
+         public:
+            using signal_type = boost::signals2::signal<void(Args...), DispatchPolicy>;
+            using result_type = void;
+
+            method_caller()
+            {}
+
+            /**
+             * call operator from boost::signals2
+             *
+             * @throws exception depending on the DispatchPolicy
+             */
+            void operator()(Args&&... args)
+            {
+               _signal(std::forward<Args>(args)...);
+            }
+
+            signal_type _signal;
+      };
+   }
+
    /**
     * A method is a loosely linked application level function.
     * Callers can grab a method and call it
@@ -78,12 +194,8 @@ namespace appbase {
     * @tparam DispatchPolicy - the policy for dispatching this method
     */
    template<typename FunctionSig, typename DispatchPolicy>
-   class method final {
+   class method final : public impl::method_caller<FunctionSig,DispatchPolicy> {
       public:
-         using traits = impl::method_traits<FunctionSig>;
-         using args_tuple_type = typename traits::args_tuple_type;
-         using result_type = typename traits::result_type;
-
          /**
           * Type that represents a registered provider for a method allowing
           * for ownership via RAII and also explicit unregistered actions
@@ -139,18 +251,7 @@ namespace appbase {
           */
          template<typename T>
          handle register_provider(T provider, int priority = 0) {
-            return handle(_signal.connect(priority, provider));
-         }
-
-         /**
-          * inhereted call operator from boost::signals2
-          *
-          * @throws exception depending on the DispatchPolicy
-          */
-         template<typename ... Args>
-         auto operator()(Args&&... args) -> typename std::enable_if_t<std::is_same<std::tuple<Args...>, args_tuple_type>::value, result_type>
-         {
-            return _signal(std::forward<Args>(args)...);
+            return handle(this->_signal.connect(priority, provider));
          }
 
       protected:
@@ -186,8 +287,6 @@ namespace appbase {
             return erased_method_ptr(new method(), &deleter);
          }
 
-         boost::signals2::signal<FunctionSig, DispatchPolicy> _signal;
-
          friend class appbase::application;
    };
 
@@ -198,14 +297,14 @@ namespace appbase {
     * @tparam FunctionSig - the signature of the method
     * @tparam DispatchPolicy - dispatch policy that dictates how providers for a method are accessed defaults to @ref first_success_policy
     */
-   template< typename Tag, typename FunctionSig, typename DispatchPolicy = first_success_policy<FunctionSig>>
+   template< typename Tag, typename FunctionSig, template <typename> class DispatchPolicy = first_success_policy>
    struct method_decl {
-      using method_type = method<FunctionSig, DispatchPolicy>;
+      using method_type = method<FunctionSig, DispatchPolicy<FunctionSig>>;
       using tag_type = Tag;
    };
 
-   template <typename...Ts>
-   std::true_type is_method_decl_impl(const method_decl<Ts...>*);
+   template <typename Tag, typename FunctionSig, template <typename> class DispatchPolicy>
+   std::true_type is_method_decl_impl(const method_decl<Tag, FunctionSig, DispatchPolicy>*);
 
    std::false_type is_method_decl_impl(...);
 
