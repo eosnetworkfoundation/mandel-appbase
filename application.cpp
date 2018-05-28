@@ -222,6 +222,12 @@ void application::exec() {
      sigterm_set->cancel();
    });
 
+   std::shared_ptr<boost::asio::signal_set> sigpipe_set(new boost::asio::signal_set(*io_serv, SIGPIPE));
+   sigpipe_set->async_wait([sigpipe_set,this](const boost::system::error_code& err, int num) {
+     quit();
+     sigpipe_set->cancel();
+   });
+
    io_serv->run();
 
    shutdown(); /// perform synchronous shutdown
