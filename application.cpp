@@ -181,11 +181,16 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
             get_plugin(name).initialize(options);
       }
    }
-   for (auto plugin : autostart_plugins)
-      if (plugin != nullptr && plugin->get_state() == abstract_plugin::registered)
-         plugin->initialize(options);
+   try {
+      for (auto plugin : autostart_plugins)
+         if (plugin != nullptr && plugin->get_state() == abstract_plugin::registered)
+            plugin->initialize(options);
 
-   bpo::notify(options);
+      bpo::notify(options);
+   } catch (...) {
+      std::cerr << "Failed to initialize\n";
+      return false;
+   }
 
    return true;
 }
