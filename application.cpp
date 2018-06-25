@@ -19,7 +19,6 @@ class application_impl {
    public:
       application_impl():_app_options("Application Options"){
       }
-      const variables_map*    _options = nullptr;
       options_description     _app_options;
       options_description     _cfg_options;
 
