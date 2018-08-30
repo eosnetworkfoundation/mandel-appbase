@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 
 namespace appbase {
 
@@ -16,9 +17,19 @@ using bpo::options_description;
 using bpo::variables_map;
 using std::cout;
 
+using any_type_compare_map = std::unordered_map<std::type_index, std::function<bool(const boost::any& a, const boost::any& b)>>;
+
 class application_impl {
    public:
       application_impl():_app_options("Application Options"){
+         register_any_type<std::string>();
+         register_any_type<bool>();
+         register_any_type<uint32_t>();
+         register_any_type<uint64_t>();
+         register_any_type<int>();
+         register_any_type<double>();
+         register_any_type<std::vector<std::string>>();
+         register_any_type<boost::filesystem::path>();
       }
       const variables_map*    _options = nullptr;
       options_description     _app_options;
@@ -29,6 +40,15 @@ class application_impl {
       bfs::path               _logging_conf{"logging.json"};
 
       uint64_t                _version;
+
+      any_type_compare_map    _any_compare_map;
+
+      template <typename T>
+      void register_any_type() {
+         _any_compare_map.emplace(typeid(T), [](const auto& a, const auto& b) {
+            return boost::any_cast<const T&>(a) == boost::any_cast<const T&>(b);
+         });
+      }
 };
 
 application::application()
@@ -173,8 +193,48 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       write_default_config(config_file_name);
    }
 
-   bpo::store(bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(),
-                                           my->_cfg_options, true), options);
+   bpo::parsed_options opts_from_config = bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(), my->_cfg_options, true);
+   bpo::store(opts_from_config, options);
+
+   bool printed_unrecognized_header = false, printed_default_header = false;
+
+   std::vector<std::string> unknown_opts;
+   for(const bpo::basic_option<char>& opt : opts_from_config.options) {
+      if(opt.unregistered) {
+         if(!printed_unrecognized_header)
+            std::cerr << "WARNING: The following options have been specified in the config file, but are unrecognized. Ignoring them." << std::endl;
+         printed_unrecognized_header = true;
+         std::cerr << "   " << opt.string_key << std::endl;
+      }
+   }
+
+   for(const boost::shared_ptr<bpo::option_description>& od_ptr : my->_cfg_options.options()) {
+      boost::any default_val, config_val;
+      if(!od_ptr->semantic()->apply_default(default_val))
+         continue;
+
+      for(const bpo::basic_option<char>& opt : opts_from_config.options) {
+         if(opt.string_key != od_ptr->long_name())
+            continue;
+
+         od_ptr->semantic()->parse(config_val, opt.value, true);
+         try {
+            if(my->_any_compare_map.at(default_val.type())(default_val, config_val)) {
+               if(!printed_default_header)
+                  std::cerr << "Warning: The following configuration items in the config.ini file are redundantly set to their default value." << std::endl
+                            << "Ensure this is what you absolutely want as future changes to application defaults will be overruled in favor" << std::endl
+                            << "of the values currently set explicitly. Consider commenting out or removing these items." << std::endl;
+               printed_default_header = true;
+               std::cerr << "   " << opt.string_key << std::endl;
+            }
+         }
+         catch(std::out_of_range& e) {
+            ///XXX TODO
+            printf("!!config item's %s type (%s) is not registered for default comparison!\n", opt.string_key.c_str(), default_val.type().name());
+         }
+         break;
+      }
+   }
 
    if(options.count("plugin") > 0)
    {
@@ -282,12 +342,14 @@ void application::print_default_config(std::ostream& os) {
          auto example = od->format_parameter();
          if(example.empty())
             // This is a boolean switch
-            os << od->long_name() << " = " << "false" << std::endl;
+            os << "# " << od->long_name() << " = " << "false" << std::endl;
+         else if(store.type() == typeid(bool))
+            os << "# " << od->long_name() << " = " << (boost::any_cast<bool&>(store) ? "true" : "false") << std::endl;
          else {
             // The string is formatted "arg (=<interesting part>)"
             example.erase(0, 6);
             example.erase(example.length()-1);
-            os << od->long_name() << " = " << example << std::endl;
+            os << "# " << od->long_name() << " = " << example << std::endl;
          }
       }
       os << std::endl;
