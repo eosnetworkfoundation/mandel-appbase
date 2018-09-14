@@ -174,7 +174,7 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    }
 
    bpo::store(bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(),
-                                           my->_cfg_options, true), options);
+                                           my->_cfg_options, false), options);
 
    if(options.count("plugin") > 0)
    {
