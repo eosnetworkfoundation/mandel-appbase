@@ -193,20 +193,10 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       write_default_config(config_file_name);
    }
 
-   bpo::parsed_options opts_from_config = bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(), my->_cfg_options, true);
+   bpo::parsed_options opts_from_config = bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(), my->_cfg_options, false);
    bpo::store(opts_from_config, options);
 
-   bool printed_unrecognized_header = false, printed_default_header = false;
-
-   std::vector<std::string> unknown_opts;
-   for(const bpo::basic_option<char>& opt : opts_from_config.options) {
-      if(opt.unregistered) {
-         if(!printed_unrecognized_header)
-            std::cerr << "WARNING: The following options have been specified in the config file, but are unrecognized. Ignoring them." << std::endl;
-         printed_unrecognized_header = true;
-         std::cerr << "   " << opt.string_key << std::endl;
-      }
-   }
+   std::vector<string> set_but_default_list;
 
    for(const boost::shared_ptr<bpo::option_description>& od_ptr : my->_cfg_options.options()) {
       boost::any default_val, config_val;
@@ -219,14 +209,8 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
 
          od_ptr->semantic()->parse(config_val, opt.value, true);
          try {
-            if(my->_any_compare_map.at(default_val.type())(default_val, config_val)) {
-               if(!printed_default_header)
-                  std::cerr << "Warning: The following configuration items in the config.ini file are redundantly set to their default value." << std::endl
-                            << "Ensure this is what you absolutely want as future changes to application defaults will be overruled in favor" << std::endl
-                            << "of the values currently set explicitly. Consider commenting out or removing these items." << std::endl;
-               printed_default_header = true;
-               std::cerr << "   " << opt.string_key << std::endl;
-            }
+            if(my->_any_compare_map.at(default_val.type())(default_val, config_val))
+               set_but_default_list.push_back(opt.string_key);
          }
          catch(std::out_of_range& e) {
             ///XXX TODO
@@ -234,6 +218,24 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
          }
          break;
       }
+   }
+   if(set_but_default_list.size()) {
+      std::cerr << "APPBASE: Warning: The following configuration items in the config.ini file are redundantly set to" << std::endl;
+      std::cerr << "         their default value:" << std::endl;
+      std::cerr << "             ";
+      size_t chars_on_line = 0;
+      for(auto it = set_but_default_list.cbegin(); it != set_but_default_list.end(); ++it) {
+         std::cerr << *it;
+         if(it + 1 != set_but_default_list.end())
+            std::cerr << ", ";
+         if((chars_on_line += it->size()) > 65) {
+            std::cerr << std::endl << "             ";
+            chars_on_line = 0;
+         }
+      }
+      std::cerr << std::endl;
+      std::cerr << "         Explicit values will override future changes to application defaults. Consider commenting out or" << std::endl;
+      std::cerr << "         removing these items." << std::endl;
    }
 
    if(options.count("plugin") > 0)
