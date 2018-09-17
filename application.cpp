@@ -31,7 +31,6 @@ class application_impl {
          register_any_type<std::vector<std::string>>();
          register_any_type<boost::filesystem::path>();
       }
-      const variables_map*    _options = nullptr;
       options_description     _app_options;
       options_description     _cfg_options;
 
