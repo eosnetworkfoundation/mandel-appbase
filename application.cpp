@@ -26,6 +26,7 @@ class application_impl {
       bfs::path               _data_dir{"data-dir"};
       bfs::path               _config_dir{"config-dir"};
       bfs::path               _logging_conf{"logging.json"};
+      bfs::path               _config_file_name;
 
       uint64_t                _version;
 };
@@ -159,20 +160,20 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    my->_logging_conf = logconf;
 
    workaround = options["config"].as<std::string>();
-   bfs::path config_file_name = workaround;
-   if( config_file_name.is_relative() )
-      config_file_name = my->_config_dir / config_file_name;
+   my->_config_file_name = workaround;
+   if( my->_config_file_name.is_relative() )
+      my->_config_file_name = my->_config_dir / my->_config_file_name;
 
-   if(!bfs::exists(config_file_name)) {
-      if(config_file_name.compare(my->_config_dir / "config.ini") != 0)
+   if(!bfs::exists(my->_config_file_name)) {
+      if(my->_config_file_name.compare(my->_config_dir / "config.ini") != 0)
       {
-         cout << "Config file " << config_file_name << " missing." << std::endl;
+         cout << "Config file " << my->_config_file_name << " missing." << std::endl;
          return false;
       }
-      write_default_config(config_file_name);
+      write_default_config(my->_config_file_name);
    }
 
-   bpo::store(bpo::parse_config_file<char>(config_file_name.make_preferred().string().c_str(),
+   bpo::store(bpo::parse_config_file<char>(my->_config_file_name.make_preferred().string().c_str(),
                                            my->_cfg_options, false), options);
 
    if(options.count("plugin") > 0)
@@ -315,6 +316,10 @@ bfs::path application::data_dir() const {
 
 bfs::path application::config_dir() const {
    return my->_config_dir;
+}
+
+bfs::path application::full_config_file_path() const {
+   return bfs::canonical(my->_config_file_name);
 }
 
 } /// namespace appbase
