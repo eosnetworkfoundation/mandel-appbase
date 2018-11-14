@@ -58,6 +58,12 @@ namespace appbase {
           * @return Logging configuration location from command line
           */
          bfs::path get_logging_conf() const;
+         /** @brief Get full config.ini path
+          *
+          * @return Config directory & config file name, possibly from command line. Only
+          *         valid after initialize() has been called.
+          */
+         bfs::path full_config_file_path() const;
          /**
           * @brief Looks for the --plugin commandline / config option and calls initialize on those plugins
           *
