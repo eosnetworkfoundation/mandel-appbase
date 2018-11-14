@@ -92,13 +92,8 @@ void application::startup() {
       sig_thread.detach();
 
       for( auto plugin : initialized_plugins ) {
-         try {
-            if( is_quiting() ) return;
-            plugin->startup();
-         } catch( ... ) {
-            shutdown();
-            throw;
-         }
+         if( is_quiting() ) return;
+         plugin->startup();
       }
 
    } catch( ... ) {
