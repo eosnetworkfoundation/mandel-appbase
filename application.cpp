@@ -66,20 +66,21 @@ bfs::path application::get_logging_conf() const {
 
 void application::startup() {
    try {
+
       auto ioc = io_serv;
-      for (auto plugin : initialized_plugins) {
-         // order of execution for single-threaded io_service is order of post
-         io_serv->post( [plugin, ioc, this](){
+      io_serv->post( [ioc, this]() {
+         for( auto plugin : initialized_plugins ) {
             try {
                if( is_quiting() ) return;
                plugin->startup();
-            } catch(...) {
+            } catch( ... ) {
                shutdown();
                throw;
             }
-         } );
-      }
-   } catch(...) {
+         }
+      } );
+
+   } catch( ... ) {
       shutdown();
       throw;
    }
