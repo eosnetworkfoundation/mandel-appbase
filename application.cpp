@@ -28,7 +28,9 @@ class application_impl {
       bfs::path               _logging_conf{"logging.json"};
       bfs::path               _config_file_name;
 
-      uint64_t                _version;
+      uint64_t                _version = 0;
+
+      std::atomic_bool        _is_quiting{false};
 };
 
 application::application()
@@ -64,9 +66,37 @@ bfs::path application::get_logging_conf() const {
 
 void application::startup() {
    try {
-      for (auto plugin : initialized_plugins)
+
+      // setup seperate io_service and thread of signals
+      std::shared_ptr<boost::asio::io_service> sig_io_serv = std::make_shared<boost::asio::io_service>();
+
+      std::shared_ptr<boost::asio::signal_set> sigint_set(new boost::asio::signal_set(*sig_io_serv, SIGINT));
+      sigint_set->async_wait([sigint_set,this](const boost::system::error_code& err, int num) {
+         quit();
+         sigint_set->cancel();
+      });
+
+      std::shared_ptr<boost::asio::signal_set> sigterm_set(new boost::asio::signal_set(*sig_io_serv, SIGTERM));
+      sigterm_set->async_wait([sigterm_set,this](const boost::system::error_code& err, int num) {
+         quit();
+         sigterm_set->cancel();
+      });
+
+      std::shared_ptr<boost::asio::signal_set> sigpipe_set(new boost::asio::signal_set(*sig_io_serv, SIGPIPE));
+      sigpipe_set->async_wait([sigpipe_set,this](const boost::system::error_code& err, int num) {
+         quit();
+         sigpipe_set->cancel();
+      });
+
+      std::thread sig_thread( [sig_io_serv]() { sig_io_serv->run(); } );
+      sig_thread.detach();
+
+      for( auto plugin : initialized_plugins ) {
+         if( is_quiting() ) return;
          plugin->startup();
-   } catch(...) {
+      }
+
+   } catch( ... ) {
       shutdown();
       throw;
    }
@@ -217,27 +247,15 @@ void application::shutdown() {
 }
 
 void application::quit() {
+   my->_is_quiting = true;
    io_serv->stop();
 }
 
+bool application::is_quiting() const {
+   return my->_is_quiting;
+}
+
 void application::exec() {
-   std::shared_ptr<boost::asio::signal_set> sigint_set(new boost::asio::signal_set(*io_serv, SIGINT));
-   sigint_set->async_wait([sigint_set,this](const boost::system::error_code& err, int num) {
-     quit();
-     sigint_set->cancel();
-   });
-
-   std::shared_ptr<boost::asio::signal_set> sigterm_set(new boost::asio::signal_set(*io_serv, SIGTERM));
-   sigterm_set->async_wait([sigterm_set,this](const boost::system::error_code& err, int num) {
-     quit();
-     sigterm_set->cancel();
-   });
-
-   std::shared_ptr<boost::asio::signal_set> sigpipe_set(new boost::asio::signal_set(*io_serv, SIGPIPE));
-   sigpipe_set->async_wait([sigpipe_set,this](const boost::system::error_code& err, int num) {
-     quit();
-     sigpipe_set->cancel();
-   });
 
    io_serv->run();
 
