@@ -2,6 +2,7 @@
 #include <appbase/plugin.hpp>
 #include <appbase/channel.hpp>
 #include <appbase/method.hpp>
+#include <appbase/execution_priority_queue.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/core/demangle.hpp>
 #include <typeindex>
@@ -168,6 +169,19 @@ namespace appbase {
           * @return io_serivice of application
           */
          boost::asio::io_service& get_io_service() { return *io_serv; }
+
+         /**
+          * Post func to run on io_service with given priority.
+          *
+          * @param priority can be appbase::priority::* constants or any int, larger ints run first
+          * @param func function to run on io_service
+          * @return result of boost::asio::post
+          */
+         template <typename Func>
+         auto post( int priority, Func&& func ) {
+            return boost::asio::post(*io_serv, pri_queue.wrap(priority, std::move(func)));
+         }
+
       protected:
          template<typename Impl>
          friend class plugin;
@@ -192,6 +206,7 @@ namespace appbase {
          map<std::type_index, erased_channel_ptr>  channels;
 
          std::shared_ptr<boost::asio::io_service>  io_serv;
+         execution_priority_queue                  pri_queue;
 
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
