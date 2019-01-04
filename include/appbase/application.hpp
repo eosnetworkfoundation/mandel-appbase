@@ -182,6 +182,18 @@ namespace appbase {
             return boost::asio::post(*io_serv, pri_queue.wrap(priority, std::move(func)));
          }
 
+         /**
+          * Provide access to execution priority queue so it can be used to wrap functions for
+          * prioritized execution.
+          *
+          * Example:
+          *   boost::asio::steady_timer timer( app().get_io_service() );
+          *   timer.async_wait( app().get_priority_queue().wrap(priority::low, [](){ do_something(); }) );
+          */
+         auto& get_priority_queue() {
+            return pri_queue;
+         }
+
       protected:
          template<typename Impl>
          friend class plugin;
