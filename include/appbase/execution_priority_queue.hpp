@@ -3,7 +3,7 @@
 
 #include <queue>
 
-#define DEBUG_PRIORITY_QUEUE
+//#define DEBUG_PRIORITY_QUEUE
 #ifdef DEBUG_PRIORITY_QUEUE
 #include <iostream>
 #include <string>
