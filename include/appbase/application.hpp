@@ -179,7 +179,7 @@ namespace appbase {
           */
          template <typename Func>
          auto post( int priority, Func&& func ) {
-            return boost::asio::post(*io_serv, pri_queue.wrap(priority, std::move(func), __FILE__, __LINE__, __func__));
+            return boost::asio::post(*io_serv, pri_queue.wrap(priority, std::forward(func), __FILE__, __LINE__, __func__));
          }
 
          /**
