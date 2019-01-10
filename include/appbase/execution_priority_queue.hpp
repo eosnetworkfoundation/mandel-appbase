@@ -35,7 +35,7 @@ public:
 
    bool execute_highest()
    {
-      // execute all with priority of HIGH or higher
+      // execute at least the highest priority, and all of the available >= priority::high priority
       while( !handlers_.empty() )
       {
          const auto& top = handlers_.top();
@@ -52,7 +52,7 @@ public:
    }
 
    void execute_high() {
-      // execute all with priority of HIGH or higher
+      // execute priority::high or higher
       while( !handlers_.empty() )
       {
          const auto& top = handlers_.top();
@@ -116,9 +116,9 @@ public:
 
    template <typename Function>
    boost::asio::executor_binder<Function, executor>
-   wrap(int priority, Function func, const char* file, int line, const char* func_name)
+   wrap(int priority, Function&& func)
    {
-      return boost::asio::bind_executor( executor(*this, priority), std::move(func) );
+      return boost::asio::bind_executor( executor(*this, priority), std::forward<Function>(func) );
    }
 
 private:
