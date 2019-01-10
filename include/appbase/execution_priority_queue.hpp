@@ -3,13 +3,6 @@
 
 #include <queue>
 
-//#define DEBUG_PRIORITY_QUEUE
-#ifdef DEBUG_PRIORITY_QUEUE
-#include <iostream>
-#include <string>
-#include <chrono>
-#endif
-
 namespace appbase {
 // adapted from: https://www.boost.org/doc/libs/1_69_0/doc/html/boost_asio/example/cpp11/invocation/prioritised_handlers.cpp
 
@@ -75,17 +68,10 @@ public:
    class executor
    {
    public:
-#ifdef DEBUG_PRIORITY_QUEUE
-      executor(execution_priority_queue& q, int p, std::string&& debug_desc)
-            : context_(q), priority_(p), debug_desc_(std::move(debug_desc))
-      {
-      }
-#else
       executor(execution_priority_queue& q, int p)
             : context_(q), priority_(p)
       {
       }
-#endif
 
       execution_priority_queue& context() const noexcept
       {
@@ -109,45 +95,9 @@ public:
       {
          context_.add(priority_, std::move(f));
       }
-      
-#ifdef DEBUG_PRIORITY_QUEUE
-      static std::string get_current_time() {
-         using namespace std;
-         using namespace std::chrono;
-         auto tp = std::chrono::system_clock::now();
 
-         auto ttime_t = system_clock::to_time_t(tp);
-         auto tp_sec = system_clock::from_time_t(ttime_t);
-         milliseconds ms = duration_cast<milliseconds>(tp - tp_sec);
-
-         std::tm * ttm = localtime(&ttime_t);
-
-         char date_time_format[] = "%Y.%m.%d-%H.%M.%S";
-
-         char time_str[] = "yyyy.mm.dd.HH-MM.SS.fff";
-
-         strftime(time_str, strlen(time_str), date_time_format, ttm);
-
-         string result(time_str);
-         result.append(".");
-         long val = ms.count();
-         if( val < 100 ) result += "0";
-         if( val < 10 ) result += "0";
-         result.append( to_string( val ));
-         return result;
-      } 
-#endif
-
-      void on_work_started() const noexcept {
-#ifdef DEBUG_PRIORITY_QUEUE
-         std::cerr << "debug " << get_current_time() << " " << debug_desc_ << " started" << std::endl;
-#endif
-      }
-      void on_work_finished() const noexcept {
-#ifdef DEBUG_PRIORITY_QUEUE
-         std::cerr << "debug " << get_current_time() << " " << debug_desc_ << " finished" << std::endl;
-#endif
-      }
+      void on_work_started() const noexcept {}
+      void on_work_finished() const noexcept {}
 
       bool operator==(const executor& other) const noexcept
       {
@@ -162,23 +112,13 @@ public:
    private:
       execution_priority_queue& context_;
       int priority_;
-#ifdef DEBUG_PRIORITY_QUEUE
-      std::string debug_desc_;
-#endif
    };
 
    template <typename Function>
    boost::asio::executor_binder<Function, executor>
    wrap(int priority, Function func, const char* file, int line, const char* func_name)
    {
-#ifdef DEBUG_PRIORITY_QUEUE
-      std::string desc = file;
-      desc += ":"; desc += std::to_string(line);
-      desc += " "; desc += func_name;
-      return boost::asio::bind_executor( executor(*this, priority, std::move(desc)), std::move(func) );
-#else
       return boost::asio::bind_executor( executor(*this, priority), std::move(func) );
-#endif
    }
 
 private:
