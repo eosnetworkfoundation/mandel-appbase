@@ -26,8 +26,7 @@ public:
 
    void execute_all()
    {
-      while (!handlers_.empty())
-      {
+      while (!handlers_.empty()) {
          handlers_.top()->execute();
          handlers_.pop();
       }
@@ -35,34 +34,12 @@ public:
 
    bool execute_highest()
    {
-      // execute at least the highest priority, and all of the available >= priority::high priority
-      while( !handlers_.empty() )
-      {
-         const auto& top = handlers_.top();
-         const int priority = top->priority();
-         top->execute();
+      if( !handlers_.empty() ) {
+         handlers_.top()->execute();
          handlers_.pop();
-         if( priority < priority::high ) {
-            // execute only one after executing all of high
-            break;
-         }
       }
 
       return !handlers_.empty();
-   }
-
-   void execute_high() {
-      // execute priority::high or higher
-      while( !handlers_.empty() )
-      {
-         const auto& top = handlers_.top();
-         const int priority = top->priority();
-         if( priority < priority::high ) {
-            break;
-         }
-         top->execute();
-         handlers_.pop();
-      }
    }
 
    class executor

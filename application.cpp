@@ -259,10 +259,7 @@ void application::exec() {
 
    bool more = true;
    while( more || io_serv->run_one() ) {
-      while( io_serv->poll_one() ) {
-         // execute any high priority added via poll_one
-         pri_queue.execute_high();
-      }
+      while( io_serv->poll_one() ) {}
       // execute the highest priority item
       more = pri_queue.execute_highest();
    }
