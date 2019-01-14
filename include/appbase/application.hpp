@@ -159,7 +159,7 @@ namespace appbase {
             if(itr != channels.end()) {
                return *channel_type::get_channel(itr->second);
             } else {
-               channels.emplace(std::make_pair(key, channel_type::make_unique(io_serv)));
+               channels.emplace(std::make_pair(key, channel_type::make_unique()));
                return  *channel_type::get_channel(channels.at(key));
             }
          }
@@ -279,4 +279,15 @@ namespace appbase {
          state _state = abstract_plugin::registered;
          std::string _name;
    };
+
+   template<typename Data, typename DispatchPolicy>
+   void channel<Data,DispatchPolicy>::publish(int priority, const Data& data) {
+      if (has_subscribers()) {
+         // this will copy data into the lambda
+         app().post( priority, [this, data]() {
+            _signal(data);
+         });
+      }
+   }
+
 }
