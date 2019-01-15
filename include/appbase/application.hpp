@@ -58,6 +58,12 @@ namespace appbase {
           * @return Logging configuration location from command line
           */
          bfs::path get_logging_conf() const;
+         /** @brief Get full config.ini path
+          *
+          * @return Config directory & config file name, possibly from command line. Only
+          *         valid after initialize() has been called.
+          */
+         bfs::path full_config_file_path() const;
          /**
           * @brief Looks for the --plugin commandline / config option and calls initialize on those plugins
           *
@@ -74,10 +80,17 @@ namespace appbase {
          void                  shutdown();
 
          /**
-          *  Wait until quit(), SIGINT or SIGTERM and then shutdown
+          *  Wait until quit(), SIGINT or SIGTERM and then shutdown.
+          *  Should only be executed from one thread.
           */
          void                 exec();
          void                 quit();
+
+         /**
+          * If in long running process this flag can be checked to see if processing should be stoppped.
+          * @return true if quit() has been called.
+          */
+         bool                 is_quiting()const;
 
          static application&  instance();
 
@@ -150,6 +163,10 @@ namespace appbase {
             }
          }
 
+         /**
+          * Do not run io_service in any other threads, as application assumes single-threaded execution in exec().
+          * @return io_serivice of application
+          */
          boost::asio::io_service& get_io_service() { return *io_serv; }
       protected:
          template<typename Impl>
