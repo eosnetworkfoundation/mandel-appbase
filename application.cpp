@@ -257,7 +257,12 @@ bool application::is_quiting() const {
 
 void application::exec() {
 
-   io_serv->run();
+   bool more = true;
+   while( more || io_serv->run_one() ) {
+      while( io_serv->poll_one() ) {}
+      // execute the highest priority item
+      more = pri_queue.execute_highest();
+   }
 
    shutdown(); /// perform synchronous shutdown
 }
