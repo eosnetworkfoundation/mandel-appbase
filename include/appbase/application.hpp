@@ -10,6 +10,8 @@ namespace appbase {
    namespace bpo = boost::program_options;
    namespace bfs = boost::filesystem;
 
+   using config_comparison_f = std::function<bool(const boost::any& a, const boost::any& b)>;
+
    class application
    {
       public:
@@ -91,6 +93,17 @@ namespace appbase {
           * @return true if quit() has been called.
           */
          bool                 is_quiting()const;
+
+         /**
+          * Register a configuration type with appbase. most "plain" types are already registered in
+          * application.cpp. Failure to register a type will cause initialization to fail.
+          */
+         template <typename T> void register_config_type() {
+            register_config_type_comparision(typeid(T), [](const auto& a, const auto& b) {
+               return boost::any_cast<const T&>(a) == boost::any_cast<const T&>(b);
+            });
+         }
+         void register_config_type_comparision(std::type_index, config_comparison_f comp);
 
          static application&  instance();
 

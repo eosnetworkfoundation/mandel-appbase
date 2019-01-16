@@ -22,14 +22,6 @@ using any_type_compare_map = std::unordered_map<std::type_index, std::function<b
 class application_impl {
    public:
       application_impl():_app_options("Application Options"){
-         register_any_type<std::string>();
-         register_any_type<bool>();
-         register_any_type<uint32_t>();
-         register_any_type<uint64_t>();
-         register_any_type<int>();
-         register_any_type<double>();
-         register_any_type<std::vector<std::string>>();
-         register_any_type<boost::filesystem::path>();
       }
       options_description     _app_options;
       options_description     _cfg_options;
@@ -44,18 +36,21 @@ class application_impl {
       std::atomic_bool        _is_quiting{false};
 
       any_type_compare_map    _any_compare_map;
-
-      template <typename T>
-      void register_any_type() {
-         _any_compare_map.emplace(typeid(T), [](const auto& a, const auto& b) {
-            return boost::any_cast<const T&>(a) == boost::any_cast<const T&>(b);
-         });
-      }
 };
 
 application::application()
 :my(new application_impl()){
    io_serv = std::make_shared<boost::asio::io_service>();
+
+   register_config_type<std::string>();
+   register_config_type<bool>();
+   register_config_type<uint16_t>();
+   register_config_type<uint32_t>();
+   register_config_type<uint64_t>();
+   register_config_type<int>();
+   register_config_type<double>();
+   register_config_type<std::vector<std::string>>();
+   register_config_type<boost::filesystem::path>();
 }
 
 application::~application() { }
@@ -128,6 +123,9 @@ application& application::instance() {
 }
 application& app() { return application::instance(); }
 
+void application::register_config_type_comparision(std::type_index i, config_comparison_f comp) {
+   my->_any_compare_map.emplace(i, comp);
+}
 
 void application::set_program_options()
 {
@@ -233,19 +231,19 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       if(!od_ptr->semantic()->apply_default(default_val))
          continue;
 
+      if(my->_any_compare_map.find(default_val.type()) == my->_any_compare_map.end()) {
+         std::cerr << "APPBASE: Developer -- the type " << default_val.type().name() << " is not registered with appbase," << std::endl;
+         std::cerr << "         add a register_config_type<>() in your plugin's ctor" << std::endl;
+         return false;
+      }
+
       for(const bpo::basic_option<char>& opt : opts_from_config.options) {
          if(opt.string_key != od_ptr->long_name())
             continue;
 
          od_ptr->semantic()->parse(config_val, opt.value, true);
-         try {
-            if(my->_any_compare_map.at(default_val.type())(default_val, config_val))
-               set_but_default_list.push_back(opt.string_key);
-         }
-         catch(std::out_of_range& e) {
-            ///XXX TODO
-            printf("!!config item's %s type (%s) is not registered for default comparison!\n", opt.string_key.c_str(), default_val.type().name());
-         }
+         if(my->_any_compare_map.at(default_val.type())(default_val, config_val))
+            set_but_default_list.push_back(opt.string_key);
          break;
       }
    }
