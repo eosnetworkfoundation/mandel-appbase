@@ -99,11 +99,11 @@ namespace appbase {
           * application.cpp. Failure to register a type will cause initialization to fail.
           */
          template <typename T> void register_config_type() {
-            register_config_type_comparision(typeid(T), [](const auto& a, const auto& b) {
+            register_config_type_comparison(typeid(T), [](const auto& a, const auto& b) {
                return boost::any_cast<const T&>(a) == boost::any_cast<const T&>(b);
             });
          }
-         void register_config_type_comparision(std::type_index, config_comparison_f comp);
+         void register_config_type_comparison(std::type_index, config_comparison_f comp);
 
          static application&  instance();
 

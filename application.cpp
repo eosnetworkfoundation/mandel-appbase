@@ -123,7 +123,7 @@ application& application::instance() {
 }
 application& app() { return application::instance(); }
 
-void application::register_config_type_comparision(std::type_index i, config_comparison_f comp) {
+void application::register_config_type_comparison(std::type_index i, config_comparison_f comp) {
    my->_any_compare_map.emplace(i, comp);
 }
 
