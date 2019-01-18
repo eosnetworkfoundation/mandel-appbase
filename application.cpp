@@ -44,10 +44,14 @@ application::application()
 
    register_config_type<std::string>();
    register_config_type<bool>();
-   register_config_type<uint16_t>();
-   register_config_type<uint32_t>();
-   register_config_type<uint64_t>();
+   register_config_type<unsigned short>();
+   register_config_type<unsigned>();
+   register_config_type<unsigned long>();
+   register_config_type<unsigned long long>();
+   register_config_type<short>();
    register_config_type<int>();
+   register_config_type<long>();
+   register_config_type<long long>();
    register_config_type<double>();
    register_config_type<std::vector<std::string>>();
    register_config_type<boost::filesystem::path>();
