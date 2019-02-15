@@ -79,6 +79,13 @@ namespace appbase {
             return initialize_impl(argc, argv, {find_plugin<Plugin>()...});
          }
 
+         void                  initialize_logging() {
+            for( auto plugin : initialized_plugins ) {
+               if( is_quiting() ) return;
+               plugin->initialize_logging();
+            }
+         }
+
          void                  startup();
          void                  shutdown();
 
@@ -264,7 +271,10 @@ namespace appbase {
                //ilog( "initializing plugin ${name}", ("name",name()) );
                app().plugin_initialized(*this);
             }
-            assert(_state == initialized); /// if initial state was not registered, final state cannot be initiaized
+            assert(_state == initialized); /// if initial state was not registered, final state cannot be initialized
+         }
+
+         virtual void initialize_logging() override {
          }
 
          virtual void startup() override {
