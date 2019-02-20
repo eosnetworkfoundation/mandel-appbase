@@ -132,7 +132,7 @@ void application::start_sighup_handler(std::shared_ptr<boost::asio::io_service> 
          sighup_callback();
          for( auto plugin : initialized_plugins ) {
             if( is_quiting() ) return;
-            plugin->initialize_logging();
+            plugin->handle_sighup();
          }
          start_sighup_handler(sig_io_serv);
       }
