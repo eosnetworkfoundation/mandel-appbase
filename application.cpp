@@ -107,7 +107,7 @@ void application::startup() {
          sigpipe_set->cancel();
       });
 
-      start_sighup_handler(sig_io_serv);
+      start_sighup_handler();
 
       std::thread sig_thread( [sig_io_serv]() { sig_io_serv->run(); } );
       sig_thread.detach();
@@ -123,19 +123,19 @@ void application::startup() {
    }
 }
 
-void application::start_sighup_handler(std::shared_ptr<boost::asio::io_service> sig_io_serv) {
-   cout << "Starting sighup handler" << std::endl;
-   std::shared_ptr<boost::asio::signal_set> sighup_set(new boost::asio::signal_set(*sig_io_serv, SIGHUP));
-   sighup_set->async_wait([sig_io_serv, sighup_set, this](const boost::system::error_code& err, int /*num*/) {
-      cout << "Invoking sighup handler" << std::endl;
-      if(!err) {
-         sighup_callback();
-         for( auto plugin : initialized_plugins ) {
-            if( is_quiting() ) return;
-            plugin->handle_sighup();
+void application::start_sighup_handler() {
+   std::shared_ptr<boost::asio::signal_set> sighup_set(new boost::asio::signal_set(*io_serv, SIGHUP));
+   sighup_set->async_wait([sighup_set, this](const boost::system::error_code& err, int /*num*/) {
+      app().post(priority::low, [err, this]() {
+         if(!err) {
+            sighup_callback();
+            for( auto plugin : initialized_plugins ) {
+               if( is_quiting() ) return;
+               plugin->handle_sighup();
+            }
+            start_sighup_handler();
          }
-         start_sighup_handler(sig_io_serv);
-      }
+      });
    });
 }
 
