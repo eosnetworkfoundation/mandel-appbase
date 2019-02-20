@@ -90,22 +90,24 @@ void application::startup() {
       std::shared_ptr<boost::asio::io_service> sig_io_serv = std::make_shared<boost::asio::io_service>();
 
       std::shared_ptr<boost::asio::signal_set> sigint_set(new boost::asio::signal_set(*sig_io_serv, SIGINT));
-      sigint_set->async_wait([sigint_set,this](const boost::system::error_code& err, int num) {
+      sigint_set->async_wait([sigint_set,this](const boost::system::error_code& /*err*/, int /*num*/) {
          quit();
          sigint_set->cancel();
       });
 
       std::shared_ptr<boost::asio::signal_set> sigterm_set(new boost::asio::signal_set(*sig_io_serv, SIGTERM));
-      sigterm_set->async_wait([sigterm_set,this](const boost::system::error_code& err, int num) {
+      sigterm_set->async_wait([sigterm_set,this](const boost::system::error_code& /*err*/, int /*num*/) {
          quit();
          sigterm_set->cancel();
       });
 
       std::shared_ptr<boost::asio::signal_set> sigpipe_set(new boost::asio::signal_set(*sig_io_serv, SIGPIPE));
-      sigpipe_set->async_wait([sigpipe_set,this](const boost::system::error_code& err, int num) {
+      sigpipe_set->async_wait([sigpipe_set,this](const boost::system::error_code& /*err*/, int /*num*/) {
          quit();
          sigpipe_set->cancel();
       });
+
+      start_sighup_handler(sig_io_serv);
 
       std::thread sig_thread( [sig_io_serv]() { sig_io_serv->run(); } );
       sig_thread.detach();
@@ -119,6 +121,22 @@ void application::startup() {
       shutdown();
       throw;
    }
+}
+
+void application::start_sighup_handler(std::shared_ptr<boost::asio::io_service> sig_io_serv) {
+   cout << "Starting sighup handler" << std::endl;
+   std::shared_ptr<boost::asio::signal_set> sighup_set(new boost::asio::signal_set(*sig_io_serv, SIGHUP));
+   sighup_set->async_wait([sig_io_serv, sighup_set, this](const boost::system::error_code& err, int /*num*/) {
+      cout << "Invoking sighup handler" << std::endl;
+      if(!err) {
+         sighup_callback();
+         for( auto plugin : initialized_plugins ) {
+            if( is_quiting() ) return;
+            plugin->handle_sighup();
+         }
+         start_sighup_handler(sig_io_serv);
+      }
+   });
 }
 
 application& application::instance() {
@@ -320,7 +338,8 @@ bool application::is_quiting() const {
 }
 
 void application::exec() {
-
+   boost::asio::io_service::work work(*io_serv);
+   (void)work;
    bool more = true;
    while( more || io_serv->run_one() ) {
       while( io_serv->poll_one() ) {}
@@ -409,6 +428,10 @@ bfs::path application::config_dir() const {
 
 bfs::path application::full_config_file_path() const {
    return bfs::canonical(my->_config_file_name);
+}
+
+void application::set_sighup_callback(std::function<void()> callback) {
+   sighup_callback = callback;
 }
 
 } /// namespace appbase

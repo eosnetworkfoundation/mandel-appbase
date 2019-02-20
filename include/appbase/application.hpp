@@ -67,6 +67,16 @@ namespace appbase {
           *         valid after initialize() has been called.
           */
          bfs::path full_config_file_path() const;
+         /** @brief Set function pointer invoked on receipt of SIGHUP
+          *
+          * The provided function will be invoked on receipt of SIGHUP followed
+          * by invoking handle_sighup() on all initialized plugins. Caller
+          * is responsible for preserving an object if necessary.
+          *
+          * @param callback Function pointer that will be invoked when the process
+          *                 receives the HUP (1) signal.
+          */
+          void set_sighup_callback(std::function<void()> callback);
          /**
           * @brief Looks for the --plugin commandline / config option and calls initialize on those plugins
           *
@@ -227,12 +237,14 @@ namespace appbase {
          vector<abstract_plugin*>                  initialized_plugins; ///< stored in the order they were started running
          vector<abstract_plugin*>                  running_plugins; ///< stored in the order they were started running
 
+         std::function<void()>                     sighup_callback;
          map<std::type_index, erased_method_ptr>   methods;
          map<std::type_index, erased_channel_ptr>  channels;
 
          std::shared_ptr<boost::asio::io_service>  io_serv;
          execution_priority_queue                  pri_queue;
 
+         void start_sighup_handler(std::shared_ptr<boost::asio::io_service> sig_io_serv);
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
          void print_default_config(std::ostream& os);
@@ -264,7 +276,10 @@ namespace appbase {
                //ilog( "initializing plugin ${name}", ("name",name()) );
                app().plugin_initialized(*this);
             }
-            assert(_state == initialized); /// if initial state was not registered, final state cannot be initiaized
+            assert(_state == initialized); /// if initial state was not registered, final state cannot be initialized
+         }
+
+         virtual void handle_sighup() override {
          }
 
          virtual void startup() override {
