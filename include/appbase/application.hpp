@@ -244,7 +244,7 @@ namespace appbase {
          std::shared_ptr<boost::asio::io_service>  io_serv;
          execution_priority_queue                  pri_queue;
 
-         void start_sighup_handler(std::shared_ptr<boost::asio::io_service> sig_io_serv);
+         void start_sighup_handler();
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
          void print_default_config(std::ostream& os);
