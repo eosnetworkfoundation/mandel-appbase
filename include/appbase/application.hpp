@@ -70,7 +70,7 @@ namespace appbase {
          /** @brief Set function pointer invoked on receipt of SIGHUP
           *
           * The provided function will be invoked on receipt of SIGHUP followed
-          * by invoking initialize_logging() on all initialized plugins. Caller
+          * by invoking handle_sighup() on all initialized plugins. Caller
           * is responsible for preserving an object if necessary.
           *
           * @param callback Function pointer that will be invoked when the process
