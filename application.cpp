@@ -107,6 +107,8 @@ void application::startup() {
          sigpipe_set->cancel();
       });
 
+      start_sighup_handler(sig_io_serv);
+
       std::thread sig_thread( [sig_io_serv]() { sig_io_serv->run(); } );
       sig_thread.detach();
 
@@ -114,8 +116,6 @@ void application::startup() {
          if( is_quiting() ) return;
          plugin->startup();
       }
-
-      start_sighup_handler(sig_io_serv);
 
    } catch( ... ) {
       shutdown();
@@ -338,7 +338,8 @@ bool application::is_quiting() const {
 }
 
 void application::exec() {
-
+   boost::asio::io_service::work work(*io_serv);
+   (void)work;
    bool more = true;
    while( more || io_serv->run_one() ) {
       while( io_serv->poll_one() ) {}
