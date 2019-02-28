@@ -19,7 +19,7 @@ public:
    template <typename Function>
    void add(int priority, Function function)
    {
-      std::unique_ptr<queued_handler_base> handler(new queued_handler<Function>(priority, std::move(function)));
+      std::unique_ptr<queued_handler_base> handler(new queued_handler<Function>(priority, --order_, std::move(function)));
 
       handlers_.push(std::move(handler));
    }
@@ -102,14 +102,13 @@ private:
    class queued_handler_base
    {
    public:
-      queued_handler_base(int p)
-            : priority_(p)
+      queued_handler_base( int p, size_t order )
+            : priority_( p )
+            , order_( order )
       {
       }
 
-      virtual ~queued_handler_base()
-      {
-      }
+      virtual ~queued_handler_base() = default;
 
       virtual void execute() = 0;
 
@@ -118,19 +117,21 @@ private:
       friend bool operator<(const std::unique_ptr<queued_handler_base>& a,
                             const std::unique_ptr<queued_handler_base>& b) noexcept
       {
-         return a->priority_ < b->priority_;
+         return std::tie( a->priority_, a->order_ ) < std::tie( b->priority_, b->order_ );
       }
 
    private:
       int priority_;
+      size_t order_;
    };
 
    template <typename Function>
    class queued_handler : public queued_handler_base
    {
    public:
-      queued_handler(int p, Function f)
-            : queued_handler_base(p), function_(std::move(f))
+      queued_handler(int p, size_t order, Function f)
+            : queued_handler_base( p, order )
+            , function_( std::move(f) )
       {
       }
 
@@ -144,6 +145,7 @@ private:
    };
 
    std::priority_queue<std::unique_ptr<queued_handler_base>, std::deque<std::unique_ptr<queued_handler_base>>> handlers_;
+   std::size_t order_ = std::numeric_limits<size_t>::max(); // to maintain FIFO ordering in queue within priority
 };
 
 } // appbase
