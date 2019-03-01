@@ -248,6 +248,10 @@ namespace appbase {
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
          void print_default_config(std::ostream& os);
+
+         void wait_for_signal(std::shared_ptr<boost::asio::signal_set> ss);
+         void setup_signal_handling_on_ios(boost::asio::io_service& ios);
+
          std::unique_ptr<class application_impl> my;
 
    };

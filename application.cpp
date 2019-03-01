@@ -84,33 +84,47 @@ bfs::path application::get_logging_conf() const {
   return my->_logging_conf;
 }
 
+void application::wait_for_signal(std::shared_ptr<boost::asio::signal_set> ss) {
+   ss->async_wait([this, ss](const boost::system::error_code& ec, int) {
+      if(ec)
+         return;
+      quit();
+      wait_for_signal(ss);
+   });
+}
+
+void application::setup_signal_handling_on_ios(boost::asio::io_service& ios) {
+   std::shared_ptr<boost::asio::signal_set> ss = std::make_shared<boost::asio::signal_set>(ios, SIGINT, SIGTERM, SIGPIPE);
+   wait_for_signal(ss);
+}
+
 void application::startup() {
+   //during startup, run a second thread to catch SIGINT/SIGTERM/SIGPIPE
+   boost::asio::io_service startup_thread_ios;
+   setup_signal_handling_on_ios(startup_thread_ios);
+   std::thread startup_thread([&startup_thread_ios]() {
+      startup_thread_ios.run();
+   });
+   auto clean_up_signal_thread = [&startup_thread_ios, &startup_thread]() {
+      startup_thread_ios.stop();
+      startup_thread.join();
+   };
+
    try {
-      std::promise<void> sig_thread_ready;
-
-      std::thread sig_thread([&sig_thread_ready, this]() {
-         boost::asio::io_service sig_ios;
-         boost::asio::io_service::work work(sig_ios);
-         boost::asio::signal_set sig_set(sig_ios, SIGINT, SIGTERM, SIGPIPE);
-         sig_thread_ready.set_value();
-         sig_set.async_wait([this](const boost::system::error_code&, int) {
-            quit();
-         });
-         sig_ios.run();
-      });
-      sig_thread.detach();
-
-      sig_thread_ready.get_future().wait();
-
       for( auto plugin : initialized_plugins ) {
          if( is_quiting() ) return;
          plugin->startup();
       }
 
    } catch( ... ) {
+      clean_up_signal_thread();
       shutdown();
       throw;
    }
+
+   //after startup, shut down the signal handling thread and catch the signals back on main io_service
+   clean_up_signal_thread();
+   setup_signal_handling_on_ios(get_io_service());
 }
 
 void application::start_sighup_handler() {
