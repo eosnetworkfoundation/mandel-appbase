@@ -42,6 +42,8 @@ public:
       return !handlers_.empty();
    }
 
+   size_t size() { return handlers_.size(); }
+
    class executor
    {
    public:
