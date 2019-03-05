@@ -112,7 +112,7 @@ void application::startup() {
 
    try {
       for( auto plugin : initialized_plugins ) {
-         if( is_quiting() ) return;
+         if( is_quiting() ) break;
          plugin->startup();
       }
 
