@@ -329,7 +329,7 @@ void application::shutdown() {
    running_plugins.clear();
    initialized_plugins.clear();
    plugins.clear();
-   io_serv.reset();
+   quit();
 }
 
 void application::quit() {
@@ -352,6 +352,7 @@ void application::exec() {
    }
 
    shutdown(); /// perform synchronous shutdown
+   io_serv.reset();
 }
 
 void application::write_default_config(const bfs::path& cfg_file) {
