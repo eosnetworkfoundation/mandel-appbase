@@ -94,7 +94,10 @@ void application::wait_for_signal(std::shared_ptr<boost::asio::signal_set> ss) {
 }
 
 void application::setup_signal_handling_on_ios(boost::asio::io_service& ios) {
-   std::shared_ptr<boost::asio::signal_set> ss = std::make_shared<boost::asio::signal_set>(ios, SIGINT, SIGTERM, SIGPIPE);
+   std::shared_ptr<boost::asio::signal_set> ss = std::make_shared<boost::asio::signal_set>(ios, SIGINT, SIGTERM);
+#ifdef SIGPIPE
+   ss->add(SIGPIPE);
+#endif
    wait_for_signal(ss);
 }
 
@@ -128,6 +131,7 @@ void application::startup() {
 }
 
 void application::start_sighup_handler() {
+#ifdef SIGHUP
    std::shared_ptr<boost::asio::signal_set> sighup_set(new boost::asio::signal_set(*io_serv, SIGHUP));
    sighup_set->async_wait([sighup_set, this](const boost::system::error_code& err, int /*num*/) {
       app().post(priority::low, [err, this]() {
@@ -141,6 +145,7 @@ void application::start_sighup_handler() {
          }
       });
    });
+#endif
 }
 
 application& application::instance() {
