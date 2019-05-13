@@ -346,7 +346,28 @@ bool application::is_quiting() const {
    return my->_is_quiting;
 }
 
+void set_thread_priority_max() {
+#if __has_include(<pthread.h>)
+   pthread_t this_thread = pthread_self();
+   struct sched_param params{};
+   int policy = 0;
+   int ret = pthread_getschedparam(this_thread, &policy, &params);
+   if( ret != 0 ) {
+      std::cerr << "ERROR: Unable to get thread priority" << std::endl;
+   }
+
+   params.sched_priority = sched_get_priority_max(policy);
+   ret = pthread_setschedparam(this_thread, policy, &params);
+   if( ret != 0 ) {
+      std::cerr << "ERROR: Unable to set thread priority" << std::endl;
+   }
+#endif
+}
+
 void application::exec() {
+
+   set_thread_priority_max();
+
    boost::asio::io_service::work work(*io_serv);
    (void)work;
    bool more = true;
