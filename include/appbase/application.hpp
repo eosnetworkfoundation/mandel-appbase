@@ -217,6 +217,12 @@ namespace appbase {
             return pri_queue;
          }
 
+         /**
+          * Set the current thread schedule priority to maximum.
+          * Works for pthreads.
+          */
+         void set_thread_priority_max();
+
       protected:
          template<typename Impl>
          friend class plugin;
