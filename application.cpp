@@ -346,7 +346,7 @@ bool application::is_quiting() const {
    return my->_is_quiting;
 }
 
-void set_thread_priority_max() {
+void application::set_thread_priority_max() {
 #if __has_include(<pthread.h>)
    pthread_t this_thread = pthread_self();
    struct sched_param params{};
@@ -365,9 +365,6 @@ void set_thread_priority_max() {
 }
 
 void application::exec() {
-
-   set_thread_priority_max();
-
    boost::asio::io_service::work work(*io_serv);
    (void)work;
    bool more = true;
