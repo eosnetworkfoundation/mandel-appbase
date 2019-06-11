@@ -217,6 +217,8 @@ namespace appbase {
             return pri_queue;
          }
 
+         const bpo::variables_map& get_options() const;
+
          /**
           * Set the current thread schedule priority to maximum.
           * Works for pthreads.
