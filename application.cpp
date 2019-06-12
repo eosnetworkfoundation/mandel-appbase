@@ -195,7 +195,11 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    set_program_options();
 
    bpo::variables_map options;
-   bpo::store(bpo::parse_command_line(argc, argv, my->_app_options), options);
+   try {
+      bpo::store(bpo::parse_command_line(argc, argv, my->_app_options), options);
+   } catch( const boost::program_options::unknown_option& e ) {
+      BOOST_THROW_EXCEPTION(std::runtime_error("Unknown option '" + e.get_option_name() + "' passed as command line argument"));
+   }
 
    if( options.count( "help" ) ) {
       cout << my->_app_options << std::endl;
@@ -252,8 +256,14 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
       write_default_config(my->_config_file_name);
    }
 
-   bpo::parsed_options opts_from_config = bpo::parse_config_file<char>(my->_config_file_name.make_preferred().string().c_str(), my->_cfg_options, false);
-   bpo::store(opts_from_config, options);
+   std::vector< bpo::basic_option<char> > opts_from_config;
+   try {
+      bpo::parsed_options parsed_opts_from_config = bpo::parse_config_file<char>(my->_config_file_name.make_preferred().string().c_str(), my->_cfg_options, false);
+      bpo::store(parsed_opts_from_config, options);
+      opts_from_config = parsed_opts_from_config.options;
+   } catch( const boost::program_options::unknown_option& e ) {
+      BOOST_THROW_EXCEPTION(std::runtime_error("Unknown option '" + e.get_option_name() + "' inside the config file " +  full_config_file_path().string()));
+   }
 
    std::vector<string> set_but_default_list;
 
@@ -268,7 +278,7 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
          return false;
       }
 
-      for(const bpo::basic_option<char>& opt : opts_from_config.options) {
+      for(const bpo::basic_option<char>& opt : opts_from_config) {
          if(opt.string_key != od_ptr->long_name())
             continue;
 
