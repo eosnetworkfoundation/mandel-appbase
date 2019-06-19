@@ -26,6 +26,7 @@ class application_impl {
       }
       options_description     _app_options;
       options_description     _cfg_options;
+      variables_map           _options;
 
       bfs::path               _data_dir{"data-dir"};
       bfs::path               _config_dir{"config-dir"};
@@ -194,7 +195,7 @@ void application::set_program_options()
 bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*> autostart_plugins) {
    set_program_options();
 
-   bpo::variables_map options;
+   bpo::variables_map& options = my->_options;
    try {
       bpo::store(bpo::parse_command_line(argc, argv, my->_app_options), options);
    } catch( const boost::program_options::unknown_option& e ) {
@@ -470,6 +471,10 @@ bfs::path application::full_config_file_path() const {
 
 void application::set_sighup_callback(std::function<void()> callback) {
    sighup_callback = callback;
+}
+
+const bpo::variables_map& application::get_options() const{
+      return my->_options;
 }
 
 } /// namespace appbase
