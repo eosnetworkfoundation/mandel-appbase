@@ -252,13 +252,13 @@ namespace appbase {
          std::shared_ptr<boost::asio::io_service>  io_serv;
          execution_priority_queue                  pri_queue;
 
-         void start_sighup_handler();
+         void start_sighup_handler( std::shared_ptr<boost::asio::signal_set> sighup_set );
          void set_program_options();
          void write_default_config(const bfs::path& cfg_file);
          void print_default_config(std::ostream& os);
 
          void wait_for_signal(std::shared_ptr<boost::asio::signal_set> ss);
-         void setup_signal_handling_on_ios(boost::asio::io_service& ios);
+         void setup_signal_handling_on_ios(boost::asio::io_service& ios, bool startup);
 
          std::unique_ptr<class application_impl> my;
 
