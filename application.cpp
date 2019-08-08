@@ -205,7 +205,11 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
 
    bpo::variables_map& options = my->_options;
    try {
-      bpo::store(bpo::parse_command_line(argc, argv, my->_app_options), options);
+      bpo::parsed_options parsed = bpo::command_line_parser(argc, argv).options(my->_app_options).run();
+      bpo::store(parsed, options);
+      vector<string> positionals = bpo::collect_unrecognized(parsed.options, bpo::include_positional);
+      if(!positionals.empty())
+         BOOST_THROW_EXCEPTION(std::runtime_error("Unknown option '" + positionals[0] + "' passed as command line argument"));
    } catch( const boost::program_options::unknown_option& e ) {
       BOOST_THROW_EXCEPTION(std::runtime_error("Unknown option '" + e.get_option_name() + "' passed as command line argument"));
    }
