@@ -115,11 +115,13 @@ private:
       virtual void execute() = 0;
 
       int priority() const { return priority_; }
-
-      friend bool operator<(const std::unique_ptr<queued_handler_base>& a,
-                            const std::unique_ptr<queued_handler_base>& b) noexcept
+      // C++20
+      // friend std::weak_ordering operator<=>(const queued_handler_base&,
+      //                                       const queued_handler_base&) noexcept = default;
+      friend bool operator<(const queued_handler_base& a,
+                            const queued_handler_base& b) noexcept
       {
-         return std::tie( a->priority_, a->order_ ) < std::tie( b->priority_, b->order_ );
+         return std::tie( a.priority_, a.order_ ) < std::tie( b.priority_, b.order_ );
       }
 
    private:
@@ -146,7 +148,16 @@ private:
       Function function_;
    };
 
-   std::priority_queue<std::unique_ptr<queued_handler_base>, std::deque<std::unique_ptr<queued_handler_base>>> handlers_;
+   struct deref_less
+   {
+      template<typename Pointer>
+      bool operator()(const Pointer& a, const Pointer& b) noexcept(noexcept(*a < *b))
+      {
+         return *a < *b;
+      }
+   };
+
+   std::priority_queue<std::unique_ptr<queued_handler_base>, std::deque<std::unique_ptr<queued_handler_base>>, deref_less> handlers_;
    std::size_t order_ = std::numeric_limits<size_t>::max(); // to maintain FIFO ordering in queue within priority
 };
 
