@@ -34,6 +34,8 @@ class application_impl {
       bfs::path               _config_file_name;
 
       uint64_t                _version = 0;
+      std::string             _version_str = appbase_version_string;
+      std::string             _full_version_str = appbase_version_string;
 
       std::atomic_bool        _is_quiting{false};
 
@@ -70,7 +72,19 @@ uint64_t application::version() const {
 }
 
 string application::version_string() const {
-   return appbase_version_string;
+   return my->_version_str;
+}
+
+void application::set_version_string( std::string v ) {
+   my->_version_str = std::move( v );
+}
+
+string application::full_version_string() const {
+   return my->_full_version_str;
+}
+
+void application::set_full_version_string( std::string v ) {
+   my->_full_version_str = std::move( v );
 }
 
 void application::set_default_data_dir(const bfs::path& data_dir) {
@@ -189,6 +203,7 @@ void application::set_program_options()
    app_cli_opts.add_options()
          ("help,h", "Print this help message and exit.")
          ("version,v", "Print version information.")
+         ("full-version", "Print full version information.")
          ("print-default-config", "Print default configuration template")
          ("data-dir,d", bpo::value<std::string>(), "Directory containing program runtime data")
          ("config-dir", bpo::value<std::string>(), "Directory containing configuration files such as config.ini")
@@ -221,6 +236,11 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
 
    if( options.count( "version" ) ) {
       cout << version_string() << std::endl;
+      return false;
+   }
+
+   if( options.count( "full-version" ) ) {
+      cout << full_version_string() << std::endl;
       return false;
    }
 
