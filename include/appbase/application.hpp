@@ -34,6 +34,17 @@ namespace appbase {
           * @return A string worthy of output with -v/--version, or "Unknown" if git not available
           */
          string version_string() const;
+         /** @brief User provided version string for version_string() which overrides git describe value.
+          */
+         void set_version_string(std::string v);
+         /** @brief Get full version string; same as version_string() unless set differently.
+          *
+          * @return A string worthy of output with -v/--version, or "Unknown" if git not available
+          */
+         string full_version_string() const;
+         /** @brief User provided full version string for full_version_string()
+          */
+         void set_full_version_string(std::string v);
          /** @brief Set default data directory
           *
           * @param data_dir Default data directory to use if not specified
