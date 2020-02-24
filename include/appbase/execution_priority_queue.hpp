@@ -7,9 +7,13 @@ namespace appbase {
 // adapted from: https://www.boost.org/doc/libs/1_69_0/doc/html/boost_asio/example/cpp11/invocation/prioritised_handlers.cpp
 
 struct priority {
-   static constexpr int high = 100;
-   static constexpr int medium = 50;
-   static constexpr int low = 10;
+   static constexpr int lowest      = std::numeric_limits<int>::min();
+   static constexpr int low         = 10;
+   static constexpr int medium_low  = 25;
+   static constexpr int medium      = 50;
+   static constexpr int medium_high = 75;
+   static constexpr int high        = 100;
+   static constexpr int highest     = std::numeric_limits<int>::max();
 };
 
 class execution_priority_queue : public boost::asio::execution_context
