@@ -54,8 +54,10 @@ target_include_directories( appbase
 
 set_target_properties( appbase PROPERTIES PUBLIC_HEADER "${HEADERS}" )
 
+option(APPBASE_ENABLE_AUTO_VERSION "enable automatic discovery of version via 'git describe'" ON)
+
 find_package(Git)
-if(EXISTS ${CMAKE_SOURCE_DIR}/.git AND GIT_FOUND)
+if(APPBASE_ENABLE_AUTO_VERSION AND EXISTS ${CMAKE_SOURCE_DIR}/.git AND GIT_FOUND)
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/version.cmake @ONLY)
   add_custom_target(appbase_version ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/version.cmake BYPRODUCTS version.cpp)
   add_dependencies(appbase appbase_version)
