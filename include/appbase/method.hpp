@@ -144,17 +144,17 @@ namespace appbase {
             using signal_type = boost::signals2::signal<Ret(Args...), DispatchPolicy>;
             using result_type = Ret;
 
-            method_caller()
-            {}
+            method_caller() = default;
 
             /**
              * call operator from boost::signals2
              *
              * @throws exception depending on the DispatchPolicy
              */
-            Ret operator()(Args&&... args)
+            template<typename ...FuncArgs>
+            Ret operator()(FuncArgs&&... args)
             {
-               return _signal(std::forward<Args>(args)...);
+               return _signal(std::forward<FuncArgs>(args)...);
             }
 
             signal_type _signal;
@@ -166,17 +166,17 @@ namespace appbase {
             using signal_type = boost::signals2::signal<void(Args...), DispatchPolicy>;
             using result_type = void;
 
-            method_caller()
-            {}
+            method_caller() = default;
 
             /**
              * call operator from boost::signals2
              *
              * @throws exception depending on the DispatchPolicy
              */
-            void operator()(Args&&... args)
+            template<typename ...FuncArgs>
+            void operator()(FuncArgs&&... args)
             {
-               _signal(std::forward<Args>(args)...);
+               _signal(std::forward<FuncArgs>(args)...);
             }
 
             signal_type _signal;
@@ -235,7 +235,7 @@ namespace appbase {
                 *
                 * @param _handle - the boost::signals2::connection to wrap
                 */
-               handle(handle_type&& _handle)
+               explicit handle(handle_type&& _handle)
                :_handle(std::move(_handle))
                {}
 
