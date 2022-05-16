@@ -1,5 +1,12 @@
 MIT License
 
+eosnetworkfoundation/mandel-appbase
+
+Copyright (c) 2021-2022 EOS Network Foundation (ENF) and its contributors.  All rights reserved. 
+This ENF software is based upon:
+
+EOSIO/appbase
+
 Copyright (c) 2017 Daniel Larimer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
