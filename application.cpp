@@ -10,6 +10,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <future>
+#include <optional>
 
 #include <unistd.h>
 #include <signal.h>
@@ -26,7 +27,32 @@ using any_type_compare_map = std::unordered_map<std::type_index, std::function<b
 class application_impl {
    public:
       application_impl():_app_options("Application Options"){
+#ifndef _WIN32
+         // Create a separate thread to handle signals, so that they don't interrupt I/O.
+         // stdio does not recover from EINTR.
+         _signal_catching_io_ctx.emplace();
+         _signal_catching_thread = std::thread([&ioctx = *_signal_catching_io_ctx]() {
+            auto workwork = boost::asio::make_work_guard(ioctx);
+            ioctx.run();
+         });
+
+         sigset_t blocked_signals;
+         sigemptyset(&blocked_signals);
+         sigaddset(&blocked_signals, SIGINT);
+         sigaddset(&blocked_signals, SIGTERM);
+         sigaddset(&blocked_signals, SIGPIPE);
+         sigaddset(&blocked_signals, SIGHUP);
+         pthread_sigmask(SIG_BLOCK, &blocked_signals, nullptr);
+#endif
       }
+
+      ~application_impl() {
+         if(_signal_catching_thread.joinable()) {
+            _signal_catching_io_ctx->stop();
+            _signal_catching_thread.join();
+         }
+      }
+
       options_description     _app_options;
       options_description     _cfg_options;
       variables_map           _options;
@@ -43,6 +69,9 @@ class application_impl {
       std::atomic_bool        _is_quiting{false};
 
       any_type_compare_map    _any_compare_map;
+
+      std::thread             _signal_catching_thread;
+      std::optional<boost::asio::io_context> _signal_catching_io_ctx;
 };
 
 application::application()
@@ -62,28 +91,6 @@ application::application()
    register_config_type<double>();
    register_config_type<std::vector<std::string>>();
    register_config_type<boost::filesystem::path>();
-
-   // Create a separate thread to handle signals, so that they don't interrupt I/O.
-   // stdio does not recover from EINTR.
-   // Because this thread is detached, all code in it must be async signal safe.
-   std::thread{[](){
-      while(true)
-      {
-         pause();
-      }
-   }}.detach();
-
-   sigset_t blocked_signals;
-   sigemptyset(&blocked_signals);
-   sigaddset(&blocked_signals, SIGINT);
-   sigaddset(&blocked_signals, SIGTERM);
-#ifdef SIGPIPE
-   sigaddset(&blocked_signals, SIGPIPE);
-#endif
-#ifdef SIGHUP
-   sigaddset(&blocked_signals, SIGHUP);
-#endif
-   pthread_sigmask(SIG_BLOCK, &blocked_signals, nullptr);
 }
 
 application::~application() { }
