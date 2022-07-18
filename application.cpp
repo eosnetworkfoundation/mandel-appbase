@@ -2,11 +2,11 @@
 #include <appbase/version.hpp>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <iostream>
+#include <filesystem>
 #include <fstream>
 #include <unordered_map>
 #include <future>
@@ -57,10 +57,10 @@ class application_impl {
       options_description     _cfg_options;
       variables_map           _options;
 
-      bfs::path               _data_dir{"data-dir"};
-      bfs::path               _config_dir{"config-dir"};
-      bfs::path               _logging_conf{"logging.json"};
-      bfs::path               _config_file_name;
+      std::filesystem::path   _data_dir{"data-dir"};
+      std::filesystem::path   _config_dir{"config-dir"};
+      std::filesystem::path   _logging_conf{"logging.json"};
+      std::filesystem::path   _config_file_name;
 
       uint64_t                _version = 0;
       std::string             _version_str = appbase_version_string;
@@ -90,7 +90,7 @@ application::application()
    register_config_type<long long>();
    register_config_type<double>();
    register_config_type<std::vector<std::string>>();
-   register_config_type<boost::filesystem::path>();
+   register_config_type<std::filesystem::path>();
 }
 
 application::~application() { }
@@ -119,15 +119,15 @@ void application::set_full_version_string( std::string v ) {
    my->_full_version_str = std::move( v );
 }
 
-void application::set_default_data_dir(const bfs::path& data_dir) {
+void application::set_default_data_dir(const std::filesystem::path& data_dir) {
   my->_data_dir = data_dir;
 }
 
-void application::set_default_config_dir(const bfs::path& config_dir) {
+void application::set_default_config_dir(const std::filesystem::path& config_dir) {
   my->_config_dir = config_dir;
 }
 
-bfs::path application::get_logging_conf() const {
+std::filesystem::path application::get_logging_conf() const {
   return my->_logging_conf;
 }
 
@@ -284,25 +284,25 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    if( options.count( "data-dir" ) ) {
       // Workaround for 10+ year old Boost defect
       // See https://svn.boost.org/trac10/ticket/8535
-      // Should be .as<bfs::path>() but paths with escaped spaces break bpo e.g.
+      // Should be .as<std::filesystem::path>() but paths with escaped spaces break bpo e.g.
       // std::exception::what: the argument ('/path/with/white\ space') for option '--data-dir' is invalid
       auto workaround = options["data-dir"].as<std::string>();
-      bfs::path data_dir = workaround;
+      std::filesystem::path data_dir = workaround;
       if( data_dir.is_relative() )
-         data_dir = bfs::current_path() / data_dir;
+         data_dir = std::filesystem::current_path() / data_dir;
       my->_data_dir = data_dir;
    }
 
    if( options.count( "config-dir" ) ) {
       auto workaround = options["config-dir"].as<std::string>();
-      bfs::path config_dir = workaround;
+      std::filesystem::path config_dir = workaround;
       if( config_dir.is_relative() )
-         config_dir = bfs::current_path() / config_dir;
+         config_dir = std::filesystem::current_path() / config_dir;
       my->_config_dir = config_dir;
    }
 
    auto workaround = options["logconf"].as<std::string>();
-   bfs::path logconf = workaround;
+   std::filesystem::path logconf = workaround;
    if( logconf.is_relative() )
       logconf = my->_config_dir / logconf;
    my->_logging_conf = logconf;
@@ -312,7 +312,7 @@ bool application::initialize_impl(int argc, char** argv, vector<abstract_plugin*
    if( my->_config_file_name.is_relative() )
       my->_config_file_name = my->_config_dir / my->_config_file_name;
 
-   if(!bfs::exists(my->_config_file_name)) {
+   if(!std::filesystem::exists(my->_config_file_name)) {
       if(my->_config_file_name.compare(my->_config_dir / "config.ini") != 0)
       {
          cout << "Config file " << my->_config_file_name << " missing." << std::endl;
@@ -455,11 +455,11 @@ void application::exec() {
    io_serv.reset();
 }
 
-void application::write_default_config(const bfs::path& cfg_file) {
-   if(!bfs::exists(cfg_file.parent_path()))
-      bfs::create_directories(cfg_file.parent_path());
+void application::write_default_config(const std::filesystem::path& cfg_file) {
+   if(!std::filesystem::exists(cfg_file.parent_path()))
+      std::filesystem::create_directories(cfg_file.parent_path());
 
-   std::ofstream out_cfg( bfs::path(cfg_file).make_preferred().string());
+   std::ofstream out_cfg( std::filesystem::path(cfg_file).make_preferred().string());
    print_default_config(out_cfg);
    out_cfg.close();
 }
@@ -524,16 +524,16 @@ abstract_plugin& application::get_plugin(const string& name)const {
    return *ptr;
 }
 
-bfs::path application::data_dir() const {
+std::filesystem::path application::data_dir() const {
    return my->_data_dir;
 }
 
-bfs::path application::config_dir() const {
+std::filesystem::path application::config_dir() const {
    return my->_config_dir;
 }
 
-bfs::path application::full_config_file_path() const {
-   return bfs::canonical(my->_config_file_name);
+std::filesystem::path application::full_config_file_path() const {
+   return std::filesystem::canonical(my->_config_file_name);
 }
 
 void application::set_sighup_callback(std::function<void()> callback) {

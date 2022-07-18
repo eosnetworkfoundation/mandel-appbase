@@ -3,13 +3,12 @@
 #include <appbase/channel.hpp>
 #include <appbase/method.hpp>
 #include <appbase/execution_priority_queue.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/core/demangle.hpp>
+#include <filesystem>
 #include <typeindex>
 
 namespace appbase {
    namespace bpo = boost::program_options;
-   namespace bfs = boost::filesystem;
 
    using config_comparison_f = std::function<bool(const boost::any& a, const boost::any& b)>;
 
@@ -50,34 +49,34 @@ namespace appbase {
           * @param data_dir Default data directory to use if not specified
           *                 on the command line.
           */
-         void set_default_data_dir(const bfs::path& data_dir = "data-dir");
+         void set_default_data_dir(const std::filesystem::path& data_dir = "data-dir");
          /** @brief Get data directory
           *
           * @return Data directory, possibly from command line
           */
-         bfs::path data_dir() const;
+         std::filesystem::path data_dir() const;
          /** @brief Set default config directory
           *
           * @param config_dir Default configuration directory to use if not
           *                   specified on the command line.
           */
-         void set_default_config_dir(const bfs::path& config_dir = "etc");
+         void set_default_config_dir(const std::filesystem::path& config_dir = "etc");
          /** @brief Get config directory
           *
           * @return Config directory, possibly from command line
           */
-         bfs::path config_dir() const;
+         std::filesystem::path config_dir() const;
          /** @brief Get logging configuration path.
           *
           * @return Logging configuration location from command line
           */
-         bfs::path get_logging_conf() const;
+         std::filesystem::path get_logging_conf() const;
          /** @brief Get full config.ini path
           *
           * @return Config directory & config file name, possibly from command line. Only
           *         valid after initialize() has been called.
           */
-         bfs::path full_config_file_path() const;
+         std::filesystem::path full_config_file_path() const;
          /** @brief Set function pointer invoked on receipt of SIGHUP
           *
           * The provided function will be invoked on receipt of SIGHUP followed
@@ -265,7 +264,7 @@ namespace appbase {
 
          void start_sighup_handler( std::shared_ptr<boost::asio::signal_set> sighup_set );
          void set_program_options();
-         void write_default_config(const bfs::path& cfg_file);
+         void write_default_config(const std::filesystem::path& cfg_file);
          void print_default_config(std::ostream& os);
 
          void wait_for_signal(std::shared_ptr<boost::asio::signal_set> ss);
